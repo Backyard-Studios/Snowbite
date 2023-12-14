@@ -12,6 +12,7 @@ typedef BOOL (WINAPI *MINIDUMPWRITEDUMP)(HANDLE hProcess, DWORD dwPid, HANDLE hF
                                          PMINIDUMP_USER_STREAM_INFORMATION UserStreamParam,
                                          PMINIDUMP_CALLBACK_INFORMATION CallbackParam);
 
+// TODO: Investigate if this also retrieves the callstack and memory from the engine.dll
 LONG WINAPI HandleException(_EXCEPTION_POINTERS* apExceptionInfo)
 {
 	const HMODULE DebugHelperModuleHandle = LoadLibrary(TEXT("dbghelp.dll"));
@@ -19,11 +20,18 @@ LONG WINAPI HandleException(_EXCEPTION_POINTERS* apExceptionInfo)
 		DebugHelperModuleHandle, "MiniDumpWriteDump"));
 	const HANDLE FileHandle = CreateFile(TEXT("core.dmp"), GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, CREATE_ALWAYS,
 	                                     FILE_ATTRIBUTE_NORMAL, nullptr);
+	constexpr MINIDUMP_TYPE MinidumpType = static_cast<MINIDUMP_TYPE>(
+		MiniDumpNormal |
+		MiniDumpWithHandleData |
+		MiniDumpWithFullMemoryInfo |
+		MiniDumpWithThreadInfo |
+		MiniDumpWithUnloadedModules
+	);
 	_MINIDUMP_EXCEPTION_INFORMATION ExInfo;
 	ExInfo.ThreadId = GetCurrentThreadId();
 	ExInfo.ExceptionPointers = apExceptionInfo;
 	ExInfo.ClientPointers = FALSE;
-	WriteDumpFunction(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, MiniDumpNormal, &ExInfo, nullptr,
+	WriteDumpFunction(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, MinidumpType, &ExInfo, nullptr,
 	                  nullptr);
 	CloseHandle(FileHandle);
 	return EXCEPTION_CONTINUE_SEARCH;
