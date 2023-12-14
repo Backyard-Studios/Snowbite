@@ -3,7 +3,7 @@ workspace_root_directory = '%{wks.location}'
 
 engine_directory = workspace_root_directory .. '/Engine'
 source_directory = engine_directory .. '/Source'
-engine_source_directory = source_directory .. '/Engine'
+runtime_source_directory = source_directory .. '/Runtime'
 third_party_directory = source_directory .. '/ThirdParty'
 
 build_output_directory = workspace_root_directory .. 'Build/Bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}'
@@ -111,7 +111,7 @@ end
 
 function sb_link_project(name, include_directory)
 	if not include_directory then
-		include_directory = engine_source_directory .. '/' .. name .. '/Public'
+		include_directory = runtime_source_directory .. '/' .. name .. '/Public'
 	end
 	includedirs {
 		include_directory,
@@ -122,7 +122,7 @@ function sb_link_project(name, include_directory)
 end
 
 function sb_project_location(name)
-	location(engine_source_directory .. '/' .. name)
+	location(runtime_source_directory .. '/' .. name)
 end
 
 function sb_third_party_project_location(name)
