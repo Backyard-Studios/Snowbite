@@ -1,6 +1,3 @@
-﻿#include <Test.h>
+﻿#include <Engine/Platform/Launch.h>
 
-int main()
-{
-	return TestFunction(10, 10);
-}
+LAUNCH_SNOWBITE()
