@@ -1,0 +1,56 @@
+# Compilation output
+Build/
+*.log
+Binaries/
+BinaryObjects/
+
+# IDE specific folders
+.idea/
+.vs/
+
+# Visual Studio files
+*.sln
+*.vcxproj
+*.vcxproj.*
+*.vcxproj.filters
+*.vcxproj.user
+*.DotSettings.user
+
+# Makefiles
+Makefile
+CMakeLists.txt
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*.pdb
+
+# Obsidian specific files
+.obsidian/
+
+# Build system files
+!Engine/Development/
+Engine/Development/Premake
+Engine/Development/__pycache__
