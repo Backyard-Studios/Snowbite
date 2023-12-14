@@ -100,6 +100,15 @@ function sb_language_cpp()
 	cppdialect 'C++20'
 end
 
+function sb_precompiled_header()
+  files {
+    '%{prj.location}/pch.cpp',
+    '%{prj.location}/pch.h',
+  }
+  pchheader('pch.h')
+  pchsource '%{prj.location}/pch.cpp'
+end
+
 function sb_link_project(name, include_directory)
 	if not include_directory then
 		include_directory = engine_source_directory .. '/' .. name .. '/Public'
