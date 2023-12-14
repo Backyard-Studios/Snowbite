@@ -54,3 +54,8 @@ CMakeLists.txt
 !Engine/Development/
 Engine/Development/Premake
 Engine/Development/__pycache__
+
+# Crash dumps
+*.dmp
+*.dump
+*.stackdump
