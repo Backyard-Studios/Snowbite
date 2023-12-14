@@ -55,6 +55,7 @@ function sb_project(name)
 			defines {
 				workspace_macro_prefix .. 'LIBRARY',
 				workspace_macro_prefix .. 'LIBRARY_SHARED',
+        workspace_macro_prefix .. 'LIBRARY_EXPORT',
 			}
 		filter { 'kind:ConsoleApp' }
 			defines {
@@ -125,16 +126,6 @@ function sb_copy_output_to_directory(directory)
 	}
 end
 
-function sb_copy_dll_to_directory(directory)
-	postbuildcommands {
-		('{COPY} %{cfg.buildtarget.relpath}/*.dll "' .. directory .. '"')
-	}
-  filter { 'configurations:Debug' }
-    postbuildcommands {
-      ('{COPY} %{cfg.buildtarget.relpath}/*.pdb "' .. directory .. '"')
-    }
-end
-
 function sb_copy_dll_from_project(project_name, directory)
   postbuildcommands {
     ('{COPY} ' .. build_output_directory .. '/' .. project_name .. '/*.dll "' .. directory .. '"')
@@ -142,6 +133,16 @@ function sb_copy_dll_from_project(project_name, directory)
   filter { 'configurations:Debug' }
     postbuildcommands {
       ('{COPY} ' .. build_output_directory .. '/' .. project_name .. '/*.pdb "' .. directory .. '"')
+    }
+end
+
+function sb_copy_dll_to_directory(directory)
+	postbuildcommands {
+		('{COPY} ' .. build_output_directory .. '/%{prj.name}/*.dll "' .. directory .. '"')
+	}
+  filter { 'configurations:Debug' }
+    postbuildcommands {
+      ('{COPY} ' .. build_output_directory .. '/%{prj.name}/*.pdb "' .. directory .. '"')
     }
 end
 
