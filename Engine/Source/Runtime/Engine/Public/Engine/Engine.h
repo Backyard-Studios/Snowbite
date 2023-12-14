@@ -15,6 +15,14 @@ public:
 	SB_DISABLE_COPY_AND_MOVE(FEngine)
 
 private:
+	HRESULT Initialize() const;
+	/**
+	 * Starts the update loop
+	 */
+	void Run() const;
+	HRESULT Shutdown(HRESULT exitCode = S_OK) const;
+
+private:
 	inline static std::shared_ptr<FEngine> EngineInstance = nullptr;
 
 private:

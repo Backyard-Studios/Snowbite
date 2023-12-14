@@ -7,8 +7,12 @@
 uint32_t LaunchSnowbite(int argc, char* argv[])
 {
 	FEngine::EngineInstance = std::make_shared<FEngine>();
-	if (FEngine::EngineInstance.use_count() != 1)
+	const HRESULT initializeResult = GetEngine()->Initialize();
+	if (SUCCEEDED(initializeResult))
+		GetEngine()->Run();
+	const HRESULT shutdownResult = GetEngine()->Shutdown(initializeResult);
+	if (GetEngine().use_count() > 2)
 		return 1;
 	SB_SAFE_RESET(FEngine::EngineInstance);
-	return 0;
+	return shutdownResult;
 }
