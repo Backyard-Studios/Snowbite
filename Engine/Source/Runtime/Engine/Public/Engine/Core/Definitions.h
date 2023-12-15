@@ -49,36 +49,36 @@
 /*
  * This macro is used to safely delete a pointer and set it to nullptr
  */
-#define SB_SAFE_DELETE(ptr) \
-	if (ptr) \
+#define SB_SAFE_DELETE(Pointer) \
+	if (Pointer) \
 	{ \
-		delete ptr; \
-		ptr = nullptr; \
+		delete Pointer; \
+		Pointer = nullptr; \
 	}
 
 /*
  * This macro is used to safely delete an array and set it to nullptr
  */
-#define SB_SAFE_DELETE_ARRAY(ptr) \
-	if (ptr) \
+#define SB_SAFE_DELETE_ARRAY(Pointer) \
+	if (Pointer) \
 	{ \
-		delete[] ptr; \
-		ptr = nullptr; \
+		delete[] Pointer; \
+		Pointer = nullptr; \
 	}
 
 /*
  * This macro is used to safely reset a shared_ptr or unique_ptr and set it to nullptr
  */
-#define SB_SAFE_RESET(ptr) \
-	if (ptr) \
+#define SB_SAFE_RESET(Pointer) \
+	if (Pointer) \
 	{ \
-		ptr.reset(); \
-		ptr = nullptr; \
+		Pointer.reset(); \
+		Pointer = nullptr; \
 	}
 
 /*
  * This macro is used to export a standard library container with a specific class
  */
-#define SB_EXPORT_STL_CONTAINER(container, className) \
-	class className; \
-	SB_TEMPLATE_EXPORT template class SNOWBITE_API container<className>;
+#define SB_EXPORT_STL_CONTAINER(Container, ClassName) \
+	class ClassName; \
+	SB_TEMPLATE_EXPORT template class SNOWBITE_API Container<ClassName>;

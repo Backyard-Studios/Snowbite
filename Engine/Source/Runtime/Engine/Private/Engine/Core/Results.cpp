@@ -2,9 +2,9 @@
 
 #include <Engine/Core/Results.h>
 
-const char* GetResultDescription(const HRESULT result)
+const char* GetResultDescription(const HRESULT Result)
 {
-	switch (result)
+	switch (Result)
 	{
 	case S_OK: return "Success";
 	case E_FAIL: return "Fail";

@@ -57,15 +57,16 @@ LONG WINAPI HandleException(_EXCEPTION_POINTERS* ExceptionInfo)
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-uint32_t LaunchSnowbite(int argc, char* argv[])
+uint32_t LaunchSnowbite(const int ArgumentCount, char* Arguments[])
 {
 	SetUnhandledExceptionFilter(HandleException);
-	FEngine::EngineInstance = std::make_shared<FEngine>();
-	const HRESULT initializeResult = GetEngine()->Initialize();
-	if (SUCCEEDED(initializeResult))
+	FArgumentParser ArgumentParser(ArgumentCount, Arguments);
+	FEngine::EngineInstance = std::make_shared<FEngine>(ArgumentParser);
+	const HRESULT InitializeResult = GetEngine()->Initialize();
+	if (SUCCEEDED(InitializeResult))
 		GetEngine()->Run();
-	const HRESULT shutdownResult = GetEngine()->Shutdown(initializeResult);
+	const HRESULT ShutdownResult = GetEngine()->Shutdown(InitializeResult);
 	SB_ASSERT_CRITICAL(GetEngine().use_count() <= 2, E_TOO_MUCH_REFERENCES, "Too much references to the engine");
 	SB_SAFE_RESET(FEngine::EngineInstance);
-	return shutdownResult;
+	return ShutdownResult;
 }
