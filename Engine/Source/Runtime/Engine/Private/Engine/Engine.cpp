@@ -20,7 +20,6 @@ HRESULT FEngine::Initialize()
 	{
 		FWindowDesc MainWindowDesc{};
 		MainWindow = std::make_shared<FWindow>(MainWindowDesc);
-		SB_ASSERT_CRITICAL(false, E_FAIL, "Failed to create main window");
 	}
 	return S_OK;
 }
