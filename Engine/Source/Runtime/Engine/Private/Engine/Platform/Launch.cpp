@@ -23,6 +23,7 @@ LONG WINAPI HandleException(_EXCEPTION_POINTERS* ExceptionInfo)
 	                                     FILE_ATTRIBUTE_NORMAL, nullptr);
 	constexpr MINIDUMP_TYPE MinidumpType = static_cast<MINIDUMP_TYPE>(
 		MiniDumpNormal |
+		MiniDumpWithDataSegs |
 		MiniDumpWithHandleData |
 		MiniDumpWithFullMemoryInfo |
 		MiniDumpWithThreadInfo |
@@ -35,12 +36,12 @@ LONG WINAPI HandleException(_EXCEPTION_POINTERS* ExceptionInfo)
 	WriteDumpFunction(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, MinidumpType, &ExInfo, nullptr,
 	                  nullptr);
 	CloseHandle(FileHandle);
-	if (ExceptionInfo->ExceptionRecord->NumberParameters == 3)
+	if (ExceptionInfo->ExceptionRecord->NumberParameters == 2)
 	{
 		HRESULT Code = static_cast<HRESULT>(ExceptionInfo->ExceptionRecord->ExceptionInformation[0]);
 		const char* Message = reinterpret_cast<const char*>(ExceptionInfo->ExceptionRecord->ExceptionInformation[1]);
 		MessageBox(nullptr, std::format(
-			           "An error occurred.\n\n{}\n\nCode: {} ({})\nProcess: {}\nThread: {}",
+			           "An error occurred. A crash dump has been created.\n\n{}\n\nCode: {} ({})\nProcess: {}\nThread: {}",
 			           Message, Code, GetResultDescription(Code),
 			           GetCurrentProcessId(), GetCurrentThreadId()).c_str(),
 		           TEXT("Snowbite"), MB_OK | MB_ICONERROR);
@@ -57,9 +58,27 @@ LONG WINAPI HandleException(_EXCEPTION_POINTERS* ExceptionInfo)
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
+// This function is called when the user presses Ctrl+C or closes the console window and allows the engine to gracefully shutdown
+BOOL WINAPI ControlHandler(const DWORD ControlType)
+{
+	switch (ControlType)
+	{
+	case CTRL_C_EVENT:
+	case CTRL_CLOSE_EVENT:
+		GetEngine()->RequestShutdown();
+		return TRUE;
+	case CTRL_BREAK_EVENT:
+	case CTRL_LOGOFF_EVENT:
+	case CTRL_SHUTDOWN_EVENT:
+	default:
+		return FALSE;
+	}
+}
+
 uint32_t LaunchSnowbite(const int ArgumentCount, char* Arguments[])
 {
 	SetUnhandledExceptionFilter(HandleException);
+	SetConsoleCtrlHandler(ControlHandler, TRUE);
 	FArgumentParser ArgumentParser(ArgumentCount, Arguments);
 	FEngine::EngineInstance = std::make_shared<FEngine>(ArgumentParser);
 	const HRESULT InitializeResult = GetEngine()->Initialize();
