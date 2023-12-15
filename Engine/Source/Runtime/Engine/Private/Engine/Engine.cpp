@@ -25,6 +25,15 @@ HRESULT FEngine::Initialize()
 	{
 		FWindowDesc MainWindowDesc{};
 		MainWindow = std::make_shared<FWindow>(MainWindowDesc);
+
+		FRendererSettings RendererSettings;
+		RendererSettings.BufferingMode = EBufferingMode::TripleBuffering;
+		RendererSettings.Window = MainWindow;
+		Renderer = std::make_shared<FRenderer>(RendererSettings);
+		MainWindow->SetOnClientResizeCallback([this](const uint32_t InWidth, const uint32_t InHeight)
+		{
+			Renderer->Resize(InWidth, InHeight);
+		});
 	}
 	return S_OK;
 }
@@ -43,6 +52,11 @@ void FEngine::Run()
 			}
 			if (MainWindow->IsClosed())
 				RequestShutdown();
+
+			Renderer->BeginFrame();
+			{
+			}
+			Renderer->EndFrame();
 		}
 	}
 }
@@ -51,7 +65,10 @@ HRESULT FEngine::Shutdown(const HRESULT ExitCode)
 {
 	SB_LOG_INFO("Shutting down...");
 	if (!IsHeadless())
+	{
+		SB_SAFE_RESET(Renderer)
 		SB_SAFE_RESET(MainWindow)
+	}
 	return ExitCode;
 }
 

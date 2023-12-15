@@ -13,5 +13,6 @@ sb_project('spdlog')
 	}
 
 	defines {
-		'SPDLOG_COMPILED_LIB'
+		'SPDLOG_COMPILED_LIB',
+    'SPDLOG_WCHAR_TO_UTF8_SUPPORT'
 	}

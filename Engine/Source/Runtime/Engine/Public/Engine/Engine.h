@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "Core/ArgumentParser.h"
+#include "Graphics/Renderer.h"
 #include "Graphics/Window.h"
 
 // ReSharper disable once CppClangTidyCertDcl58Cpp
@@ -39,6 +40,7 @@ private:
 	bool bIsHeadless = false;
 
 	std::shared_ptr<FWindow> MainWindow = nullptr;
+	std::shared_ptr<FRenderer> Renderer = nullptr;
 
 	friend SNOWBITE_API uint32_t LaunchSnowbite(int ArgumentCount, char* Arguments[]);
 	friend SNOWBITE_API std::shared_ptr<FEngine> GetEngine();
