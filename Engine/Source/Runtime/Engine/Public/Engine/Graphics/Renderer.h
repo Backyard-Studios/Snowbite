@@ -3,6 +3,7 @@
 #include <Engine/Core/Definitions.h>
 
 #include "BufferingMode.h"
+#include "ClearColor.h"
 #include "GraphicsDevice.h"
 
 struct SNOWBITE_API FRendererSettings
@@ -18,6 +19,7 @@ public:
 	~FRenderer();
 
 	void Resize(uint32_t InWidth, uint32_t InHeight) const;
+	void SetClearColor(FClearColor InClearColor);
 
 	void BeginFrame() const;
 	void EndFrame() const;
@@ -25,4 +27,5 @@ public:
 private:
 	FRendererSettings Settings;
 	std::shared_ptr<FGraphicsDevice> GraphicsDevice;
+	FClearColor ClearColor;
 };

@@ -5,6 +5,7 @@
 #include <Engine/Graphics/DirectXInclude.h>
 
 #include "BufferingMode.h"
+#include "ClearColor.h"
 #include "SwapChain.h"
 
 struct SNOWBITE_API FGraphicsDeviceSettings
@@ -27,7 +28,7 @@ public:
 
 	void Resize(uint32_t InWidth, uint32_t InHeight);
 
-	void BeginFrame() const;
+	void BeginFrame(const FClearColor& ClearColor) const;
 	void EndFrame();
 
 	[[nodiscard]] ComPointer<IDXGIFactory7> GetFactory() const { return Factory; }

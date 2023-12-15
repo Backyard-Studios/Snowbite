@@ -26,9 +26,14 @@ void FRenderer::Resize(const uint32_t InWidth, const uint32_t InHeight) const
 	GraphicsDevice->Resize(InWidth, InHeight);
 }
 
+void FRenderer::SetClearColor(const FClearColor InClearColor)
+{
+	ClearColor = InClearColor;
+}
+
 void FRenderer::BeginFrame() const
 {
-	GraphicsDevice->BeginFrame();
+	GraphicsDevice->BeginFrame(ClearColor);
 }
 
 void FRenderer::EndFrame() const

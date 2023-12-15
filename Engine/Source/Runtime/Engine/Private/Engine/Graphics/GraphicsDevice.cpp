@@ -171,7 +171,7 @@ void FGraphicsDevice::Resize(const uint32_t InWidth, const uint32_t InHeight)
 	SwapChain->Resize(InWidth, InHeight);
 }
 
-void FGraphicsDevice::BeginFrame() const
+void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor) const
 {
 	ComPointer<ID3D12CommandAllocator> CommandAllocator = CommandAllocators[SwapChain->GetFrameIndex()];
 	const HRESULT ResetCommandAllocatorResult = CommandAllocator->Reset();
@@ -190,9 +190,9 @@ void FGraphicsDevice::BeginFrame() const
 	Barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	CommandList->ResourceBarrier(1, &Barrier);
 
-	constexpr float ClearColor[] = {0.0f, 0.0f, 1.0f, 1.0f};
+	const float ClearColorArray[] = {ClearColor.Red, ClearColor.Green, ClearColor.Blue, ClearColor.Alpha};
 	const D3D12_CPU_DESCRIPTOR_HANDLE BackBufferDescriptor = SwapChain->GetBackBufferDescriptor();
-	CommandList->ClearRenderTargetView(BackBufferDescriptor, ClearColor, 0, nullptr);
+	CommandList->ClearRenderTargetView(BackBufferDescriptor, ClearColorArray, 0, nullptr);
 	CommandList->OMSetRenderTargets(1, &BackBufferDescriptor, FALSE, nullptr);
 }
 

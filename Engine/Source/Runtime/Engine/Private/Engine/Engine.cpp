@@ -30,6 +30,7 @@ HRESULT FEngine::Initialize()
 		RendererSettings.BufferingMode = EBufferingMode::TripleBuffering;
 		RendererSettings.Window = MainWindow;
 		Renderer = std::make_shared<FRenderer>(RendererSettings);
+		Renderer->SetClearColor(FClearColor(1.0f, 0.0f, 0.396f, 1.0f));
 		MainWindow->SetOnClientResizeCallback([this](const uint32_t InWidth, const uint32_t InHeight)
 		{
 			Renderer->Resize(InWidth, InHeight);
