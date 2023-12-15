@@ -45,7 +45,8 @@ function sb_project(name)
         'WIN32_LEAN_AND_MEAN',
         'NOMINMAX',
       }
-      linkoptions { '/IGNORE:4099' }
+      linkoptions { '-IGNORE:4099' }
+			disablewarnings { '4251' }
     filter { 'kind:StaticLib' }
 			defines {
 				workspace_macro_prefix .. 'LIBRARY',
