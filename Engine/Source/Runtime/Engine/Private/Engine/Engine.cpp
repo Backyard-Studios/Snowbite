@@ -66,6 +66,7 @@ HRESULT FEngine::Shutdown(const HRESULT ExitCode)
 	SB_LOG_INFO("Shutting down...");
 	if (!IsHeadless())
 	{
+		MainWindow->SetOnClientResizeCallback(nullptr);
 		SB_SAFE_RESET(Renderer)
 		SB_SAFE_RESET(MainWindow)
 	}
