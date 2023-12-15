@@ -13,7 +13,7 @@ typedef BOOL (WINAPI *MINIDUMPWRITEDUMP)(HANDLE hProcess, DWORD dwPid, HANDLE hF
                                          PMINIDUMP_CALLBACK_INFORMATION CallbackParam);
 
 // TODO: Investigate if this also retrieves the callstack and memory from the engine.dll
-LONG WINAPI HandleException(_EXCEPTION_POINTERS* apExceptionInfo)
+LONG WINAPI HandleException(_EXCEPTION_POINTERS* ExceptionInfo)
 {
 	const HMODULE DebugHelperModuleHandle = LoadLibrary(TEXT("dbghelp.dll"));
 	const MINIDUMPWRITEDUMP WriteDumpFunction = reinterpret_cast<MINIDUMPWRITEDUMP>(GetProcAddress(
@@ -29,11 +29,13 @@ LONG WINAPI HandleException(_EXCEPTION_POINTERS* apExceptionInfo)
 	);
 	_MINIDUMP_EXCEPTION_INFORMATION ExInfo;
 	ExInfo.ThreadId = GetCurrentThreadId();
-	ExInfo.ExceptionPointers = apExceptionInfo;
+	ExInfo.ExceptionPointers = ExceptionInfo;
 	ExInfo.ClientPointers = FALSE;
 	WriteDumpFunction(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, MinidumpType, &ExInfo, nullptr,
 	                  nullptr);
 	CloseHandle(FileHandle);
+	MessageBox(nullptr, TEXT("An unhandled exception has occurred. A core dump has been written to core.dmp."),
+	           TEXT("Snowbite | Unhandled Exception"), MB_OK | MB_ICONERROR);
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
