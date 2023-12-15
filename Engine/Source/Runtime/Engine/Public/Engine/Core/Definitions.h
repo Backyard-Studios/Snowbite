@@ -82,3 +82,5 @@
 #define SB_EXPORT_STL_CONTAINER(Container, ClassName) \
 	class ClassName; \
 	SB_TEMPLATE_EXPORT template class SNOWBITE_API Container<ClassName>;
+
+#define SB_MAKE_VERSION(major, minor, patch) ((((uint32_t)(major)) << 22U) | (((uint32_t)(minor)) << 12U) | ((uint32_t)(patch)))
