@@ -8,3 +8,6 @@ group 'Applications'
   include 'Projects/sandbox.lua'
 
 group 'GameModules'
+
+group 'ThirdParty'
+  include 'Projects/spdlog.lua'
