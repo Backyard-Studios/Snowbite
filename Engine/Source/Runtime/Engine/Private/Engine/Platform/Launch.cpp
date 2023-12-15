@@ -6,6 +6,7 @@
 
 #include <windows.h>
 #include <Dbghelp.h>
+#include <format>
 
 typedef BOOL (WINAPI *MINIDUMPWRITEDUMP)(HANDLE hProcess, DWORD dwPid, HANDLE hFile, MINIDUMP_TYPE DumpType,
                                          PMINIDUMP_EXCEPTION_INFORMATION ExceptionParam,
@@ -34,8 +35,25 @@ LONG WINAPI HandleException(_EXCEPTION_POINTERS* ExceptionInfo)
 	WriteDumpFunction(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, MinidumpType, &ExInfo, nullptr,
 	                  nullptr);
 	CloseHandle(FileHandle);
-	MessageBox(nullptr, TEXT("An unhandled exception has occurred. A core dump has been written to core.dmp."),
-	           TEXT("Snowbite | Unhandled Exception"), MB_OK | MB_ICONERROR);
+	if (ExceptionInfo->ExceptionRecord->NumberParameters == 3)
+	{
+		HRESULT Code = static_cast<HRESULT>(ExceptionInfo->ExceptionRecord->ExceptionInformation[0]);
+		const char* Message = reinterpret_cast<const char*>(ExceptionInfo->ExceptionRecord->ExceptionInformation[1]);
+		MessageBox(nullptr, std::format(
+			           "An error occurred.\n\n{}\n\nCode: {} ({})\nProcess: {}\nThread: {}",
+			           Message, Code, GetResultDescription(Code),
+			           GetCurrentProcessId(), GetCurrentThreadId()).c_str(),
+		           TEXT("Snowbite"), MB_OK | MB_ICONERROR);
+	}
+	else
+	{
+		MessageBox(nullptr, std::format(
+			           "Unexpected error occurred. A crash dump has been created.\n\nCode: {}\nProcess: {}\nThread: {}",
+			           ExceptionInfo->ExceptionRecord->ExceptionCode, GetCurrentProcessId(),
+			           GetCurrentThreadId(),
+			           reinterpret_cast<const char*>(ExceptionInfo->ExceptionRecord->ExceptionInformation[0])).c_str(),
+		           TEXT("Snowbite"), MB_OK | MB_ICONERROR);
+	}
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
@@ -47,8 +65,7 @@ uint32_t LaunchSnowbite(int argc, char* argv[])
 	if (SUCCEEDED(initializeResult))
 		GetEngine()->Run();
 	const HRESULT shutdownResult = GetEngine()->Shutdown(initializeResult);
-	if (GetEngine().use_count() > 2)
-		return 1;
+	SB_ASSERT_CRITICAL(GetEngine().use_count() <= 2, E_TOO_MUCH_REFERENCES, "Too much references to the engine");
 	SB_SAFE_RESET(FEngine::EngineInstance);
 	return shutdownResult;
 }

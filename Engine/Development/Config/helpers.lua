@@ -73,6 +73,7 @@ end
 function sb_default_compiler_flags()
 	targetdir(build_output_directory .. '/%{prj.name}')
 	objdir(intermediate_output_directory .. '/%{prj.name}')
+	characterset 'MBCS'
 	floatingpoint 'Fast' -- Change to 'Fast' for performance or 'Strict' in case of floating point issues
 	staticruntime 'Off'
 	flags {
