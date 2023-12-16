@@ -7,3 +7,4 @@
 #include <dxgidebug.h>
 #include <wrl.h>
 #include <Engine/Graphics/ComPointer.h>
+#include <Engine/Graphics/DirectX12Helpers.h>
