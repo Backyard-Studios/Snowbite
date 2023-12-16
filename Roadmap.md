@@ -3,8 +3,8 @@
 - [x] Logging
 - [x] Windowing
 - [ ] **_Basic Rendering (Triangle, Camera, ...)_**
-- [ ] Input
 - [ ] ImGui Integration
+- [ ] Input
 - [ ] Application Abstraction
 - [ ] Layer Based Architecture
 - [ ] Thread Pool / Job System

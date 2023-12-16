@@ -1,8 +1,8 @@
 ﻿#include "pch.h"
 
-#include <codecvt>
-#include <filesystem>
 #include <Engine/Graphics/GraphicsDevice.h>
+
+#include <filesystem>
 
 // ReSharper disable CppNonInlineVariableDefinitionInHeaderFile
 extern "C" {
@@ -86,15 +86,18 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 		const HRESULT CommandAllocatorCreateResult = Device->CreateCommandAllocator(
 			D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&CommandAllocators[Index]));
 		SB_D3D_ASSERT(CommandAllocatorCreateResult, "Failed to create command allocator");
+		CommandAllocators[Index]->SetName((L"Command Allocator Frame " + std::to_wstring(Index)).c_str());
 
 		const HRESULT CommandListCreateResult = Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
 		                                                                  CommandAllocators[Index].Get(), nullptr,
 		                                                                  IID_PPV_ARGS(&CommandLists[Index]));
 		SB_D3D_ASSERT(CommandListCreateResult, "Failed to create command list");
 		CommandLists[Index]->Close();
+		CommandLists[Index]->SetName((L"Command List Frame " + std::to_wstring(Index)).c_str());
 
 		const HRESULT FenceCreateResult = Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&Fences[Index]));
 		SB_D3D_ASSERT(FenceCreateResult, "Failed to create fence");
+		Fences[Index]->SetName((L"Fence Frame " + std::to_wstring(Index)).c_str());
 		FenceValues[Index] = 0;
 	}
 	FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -132,6 +135,8 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	SB_D3D_ASSERT(CreateRootSignatureResult, "Failed to create root signature");
 	RootSignatureBlob.Release();
 
+	ComPointer<ID3DBlob> VertexShaderBlob;
+	ComPointer<ID3DBlob> PixelShaderBlob;
 	D3D12_SHADER_BYTECODE VertexShaderByteCode = CompileShader(L"Assets/Shaders/default.vert.hlsl", "main", "vs_5_0",
 	                                                           VertexShaderBlob);
 	D3D12_SHADER_BYTECODE PixelShaderByteCode = CompileShader(L"Assets/Shaders/default.pixl.hlsl", "main", "ps_5_0",
@@ -140,7 +145,10 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	D3D12_INPUT_ELEMENT_DESC InputElementDescs[] =
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+		{
+			"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(FVector3), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			0
+		},
 	};
 
 	D3D12_INPUT_LAYOUT_DESC InputLayoutDesc;
@@ -169,124 +177,38 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	SB_D3D_ASSERT(PipelineCreateResult, "Failed to create pipeline state");
 	VertexShaderBlob.Release();
 	PixelShaderBlob.Release();
-
-	struct Vector3
-	{
-		float X = 0.0f;
-		float Y = 0.0f;
-		float Z = 0.0f;
-	};
-
-	struct Vertex
-	{
-		Vector3 Position;
-		Vector3 Color;
-	};
-
-	Vertex Vertices[] = {
-		{{-0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}}, // top left
-		{{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}}, // bottom right
-		{{-0.5f, -0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}, // bottom left
-		{{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}, // top right
-	};
-	size_t VerticesSize = sizeof(Vertices);
-	CD3DX12_HEAP_PROPERTIES HeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-	CD3DX12_RESOURCE_DESC ResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(VerticesSize);
-	HRESULT VertexBufferCreateResult = Device->CreateCommittedResource(
-		&HeapProperties, D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-		IID_PPV_ARGS(&VertexBuffer));
-	SB_D3D_ASSERT(VertexBufferCreateResult, "Failed to create vertex buffer");
-	VertexBuffer->SetName(L"Vertex Buffer Resource Heap");
-
-	ComPointer<ID3D12Resource> VertexBufferUploadHeap;
-	CD3DX12_HEAP_PROPERTIES UploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
-	CD3DX12_RESOURCE_DESC ResourceDesc2 = CD3DX12_RESOURCE_DESC::Buffer(VerticesSize);
-	HRESULT VertexBufferUploadHeapCreateResult = Device->CreateCommittedResource(
-		&UploadHeapProperties, D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc2, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-		IID_PPV_ARGS(&VertexBufferUploadHeap));
-	SB_D3D_ASSERT(VertexBufferUploadHeapCreateResult, "Failed to create vertex buffer upload heap");
-	VertexBufferUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
-
-	D3D12_SUBRESOURCE_DATA VertexData = {};
-	VertexData.pData = reinterpret_cast<BYTE*>(Vertices);
-	VertexData.RowPitch = VerticesSize;
-	VertexData.SlicePitch = VerticesSize;
+	PipelineState->SetName(L"Default pipeline state");
+	RootSignature->SetName(L"Default root signature");
 
 	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists.at(0);
 	CommandList->Reset(CommandAllocators.at(0).Get(), nullptr);
 
-	UpdateSubresources(CommandList.Get(), VertexBuffer.Get(), VertexBufferUploadHeap.Get(), 0, 0, 1, &VertexData);
-	CD3DX12_RESOURCE_BARRIER Barrier = CD3DX12_RESOURCE_BARRIER::Transition(VertexBuffer,
-	                                                                        D3D12_RESOURCE_STATE_COPY_DEST,
-	                                                                        D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	CommandList->ResourceBarrier(1, &Barrier);
-	CommandList->Close();
-	ExecuteCommandList(CommandList);
-	VertexBufferView.BufferLocation = VertexBuffer->GetGPUVirtualAddress();
-	VertexBufferView.StrideInBytes = sizeof(Vertex);
-	VertexBufferView.SizeInBytes = VerticesSize;
-
-	DWORD Indices[] = {
-		0, 1, 2, // first triangle
-		0, 3, 1 // second triangle
+	FVertex Vertices[] = {
+		{{-0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}}, // top left
+		{{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}}, // bottom right
+		{{-0.5f, -0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}, // bottom left
+		{{0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}}, // top right
 	};
-	size_t IndicesSize = sizeof(Indices);
-	CD3DX12_RESOURCE_DESC IndexBufferResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(IndicesSize);
-	CD3DX12_HEAP_PROPERTIES IndexBufferHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-	HRESULT IndexBufferCreateResult = Device->CreateCommittedResource(
-		&IndexBufferHeapProperties, D3D12_HEAP_FLAG_NONE,
-		&IndexBufferResourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-		IID_PPV_ARGS(&IndexBuffer));
-	SB_D3D_ASSERT(IndexBufferCreateResult, "Failed to create index buffer");
-	IndexBuffer->SetName(L"Index Buffer Resource Heap");
-
-	ComPointer<ID3D12Resource> IndexBufferUploadHeap;
-	CD3DX12_HEAP_PROPERTIES IndexBufferUploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	CD3DX12_RESOURCE_DESC IndexBufferUploadResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(IndicesSize);
-	HRESULT IndexBufferUploadHeapCreateResult = Device->CreateCommittedResource(
-		&IndexBufferUploadHeapProperties, D3D12_HEAP_FLAG_NONE,
-		&IndexBufferUploadResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-		IID_PPV_ARGS(&IndexBufferUploadHeap));
-	SB_D3D_ASSERT(IndexBufferUploadHeapCreateResult, "Failed to create index buffer upload heap");
-	IndexBufferUploadHeap->SetName(L"Index Buffer Upload Resource Heap");
-
-	D3D12_SUBRESOURCE_DATA IndexData = {};
-	IndexData.pData = reinterpret_cast<BYTE*>(Indices);
-	IndexData.RowPitch = IndicesSize;
-	IndexData.SlicePitch = IndicesSize;
+	VertexBuffer = std::make_unique<FVertexBuffer>(this, Vertices, _countof(Vertices));
+	VertexBuffer->Upload(CommandList);
 
 	CommandList->Reset(CommandAllocators.at(0).Get(), nullptr);
 
-	UpdateSubresources(CommandList.Get(), IndexBuffer.Get(), IndexBufferUploadHeap.Get(), 0, 0, 1, &IndexData);
-	CD3DX12_RESOURCE_BARRIER IndexBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(IndexBuffer,
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	CommandList->ResourceBarrier(1, &IndexBufferBarrier);
-	CommandList->Close();
-	ExecuteCommandList(CommandList);
-	IndexBufferView.BufferLocation = IndexBuffer->GetGPUVirtualAddress();
-	IndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-	IndexBufferView.SizeInBytes = IndicesSize;
+	FIndex Indices[] = {
+		0, 1, 2,
+		0, 3, 1,
+	};
+	IndexBuffer = std::make_unique<FIndexBuffer>(this, Indices, _countof(Indices));
+	IndexBuffer->Upload(CommandList);
 
-	Viewport.TopLeftX = 0;
-	Viewport.TopLeftY = 0;
-	Viewport.Width = Settings.Window->GetState().Width;
-	Viewport.Height = Settings.Window->GetState().Height;
-	Viewport.MinDepth = 0.0f;
-	Viewport.MaxDepth = 1.0f;
-
-	ScissorRect.left = 0;
-	ScissorRect.top = 0;
-	ScissorRect.right = Settings.Window->GetState().Width;
-	ScissorRect.bottom = Settings.Window->GetState().Height;
+	SetViewportAndScissor(Settings.Window->GetState().Width, Settings.Window->GetState().Height);
 }
 
 FGraphicsDevice::~FGraphicsDevice()
 {
 	Flush(static_cast<uint32_t>(Settings.BufferingMode));
-	VertexBuffer.Release();
+	SB_SAFE_RESET(IndexBuffer);
+	SB_SAFE_RESET(VertexBuffer);
 	PipelineState.Release();
 	RootSignature.Release();
 	if (FenceEvent)
@@ -337,20 +259,20 @@ void FGraphicsDevice::Resize(const uint32_t InWidth, const uint32_t InHeight)
 {
 	Flush(static_cast<uint32_t>(Settings.BufferingMode));
 	SwapChain->Resize(InWidth, InHeight);
-	Viewport.TopLeftX = 0;
-	Viewport.TopLeftY = 0;
-	Viewport.Width = Settings.Window->GetState().Width;
-	Viewport.Height = Settings.Window->GetState().Height;
-	Viewport.MinDepth = 0.0f;
-	Viewport.MaxDepth = 1.0f;
-
-	ScissorRect.left = 0;
-	ScissorRect.top = 0;
-	ScissorRect.right = Settings.Window->GetState().Width;
-	ScissorRect.bottom = Settings.Window->GetState().Height;
+	SetViewportAndScissor(InWidth, InHeight);
 }
 
-void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
+std::shared_ptr<FVertexBuffer> FGraphicsDevice::CreateVertexBuffer(FVertex* Vertices, uint32_t Count)
+{
+	return std::make_shared<FVertexBuffer>(this, Vertices, Count);
+}
+
+std::shared_ptr<FIndexBuffer> FGraphicsDevice::CreateIndexBuffer(FIndex* Indices, uint32_t Count)
+{
+	return std::make_shared<FIndexBuffer>(this, Indices, Count);
+}
+
+void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor) const
 {
 	ComPointer<ID3D12CommandAllocator> CommandAllocator = CommandAllocators[SwapChain->GetFrameIndex()];
 	const HRESULT ResetCommandAllocatorResult = CommandAllocator->Reset();
@@ -374,14 +296,16 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 	CommandList->ClearRenderTargetView(BackBufferDescriptor, ClearColorArray, 0, nullptr);
 	CommandList->OMSetRenderTargets(1, &BackBufferDescriptor, FALSE, nullptr);
 
-	CommandList->SetGraphicsRootSignature(RootSignature.Get());
-	CommandList->SetPipelineState(PipelineState.Get());
 	CommandList->RSSetViewports(1, &Viewport);
 	CommandList->RSSetScissorRects(1, &ScissorRect);
 	CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
-	CommandList->IASetIndexBuffer(&IndexBufferView);
-	CommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
+	FDrawCall DrawCall;
+	DrawCall.RootSignature = RootSignature;
+	DrawCall.PipelineState = PipelineState;
+	DrawCall.VertexBuffer = VertexBuffer;
+	DrawCall.IndexBuffer = IndexBuffer;
+	Draw(DrawCall);
 }
 
 void FGraphicsDevice::EndFrame()
@@ -402,6 +326,18 @@ void FGraphicsDevice::EndFrame()
 
 	ExecuteCommandList(CommandList);
 	SwapChain->Present(true);
+}
+
+void FGraphicsDevice::Draw(FDrawCall& DrawCall) const
+{
+	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists[SwapChain->GetFrameIndex()];
+	CommandList->SetGraphicsRootSignature(DrawCall.RootSignature.Get());
+	CommandList->SetPipelineState(DrawCall.PipelineState.Get());
+	const D3D12_VERTEX_BUFFER_VIEW VertexBufferView = DrawCall.VertexBuffer->GetView();
+	CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+	const D3D12_INDEX_BUFFER_VIEW IndexBufferView = DrawCall.IndexBuffer->GetView();
+	CommandList->IASetIndexBuffer(&IndexBufferView);
+	CommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 }
 
 void FGraphicsDevice::ExecuteCommandList(ComPointer<ID3D12GraphicsCommandList7> CommandList)
@@ -435,4 +371,18 @@ D3D12_SHADER_BYTECODE FGraphicsDevice::CompileShader(const std::wstring& FileNam
 	ShaderBytecode.BytecodeLength = ShaderBlob->GetBufferSize();
 	ShaderBytecode.pShaderBytecode = ShaderBlob->GetBufferPointer();
 	return ShaderBytecode;
+}
+
+void FGraphicsDevice::SetViewportAndScissor(const uint32_t Width, const uint32_t Height)
+{
+	Viewport.TopLeftX = 0;
+	Viewport.TopLeftY = 0;
+	Viewport.Width = static_cast<float>(Width);
+	Viewport.Height = static_cast<float>(Height);
+	Viewport.MinDepth = 0.0f;
+	Viewport.MaxDepth = 1.0f;
+	ScissorRect.left = 0;
+	ScissorRect.top = 0;
+	ScissorRect.right = Width;
+	ScissorRect.bottom = Height;
 }

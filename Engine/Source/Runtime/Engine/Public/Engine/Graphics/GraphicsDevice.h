@@ -6,7 +6,9 @@
 
 #include "BufferingMode.h"
 #include "ClearColor.h"
+#include "IndexBuffer.h"
 #include "SwapChain.h"
+#include "VertexBuffer.h"
 
 struct SNOWBITE_API FGraphicsDeviceSettings
 {
@@ -18,6 +20,14 @@ struct SNOWBITE_API FGraphicsDeviceSettings
 	std::shared_ptr<FWindow> Window;
 };
 
+struct SNOWBITE_API FDrawCall
+{
+	std::shared_ptr<FVertexBuffer> VertexBuffer;
+	std::shared_ptr<FIndexBuffer> IndexBuffer;
+	ComPointer<ID3D12RootSignature> RootSignature;
+	ComPointer<ID3D12PipelineState> PipelineState;
+};
+
 class SNOWBITE_API FGraphicsDevice
 {
 public:
@@ -26,11 +36,17 @@ public:
 
 	void SignalAndWait();
 	void Flush(uint32_t Count = 1);
+	void ExecuteCommandList(ComPointer<ID3D12GraphicsCommandList7> CommandList);
 
 	void Resize(uint32_t InWidth, uint32_t InHeight);
 
-	void BeginFrame(const FClearColor& ClearColor);
+	std::shared_ptr<FVertexBuffer> CreateVertexBuffer(FVertex* Vertices, uint32_t Count);
+	std::shared_ptr<FIndexBuffer> CreateIndexBuffer(FIndex* Indices, uint32_t Count);
+
+	void BeginFrame(const FClearColor& ClearColor) const;
 	void EndFrame();
+
+	void Draw(FDrawCall& DrawCall) const;
 
 	[[nodiscard]] ComPointer<IDXGIFactory7> GetFactory() const { return Factory; }
 	[[nodiscard]] ComPointer<ID3D12Device10> GetDevice() const { return Device; }
@@ -39,9 +55,9 @@ public:
 	[[nodiscard]] uint32_t GetRtvDescriptorSize() const { return RtvDescriptorSize; }
 
 private:
-	void ExecuteCommandList(ComPointer<ID3D12GraphicsCommandList7> CommandList);
 	D3D12_SHADER_BYTECODE CompileShader(const std::wstring& FileName, const std::string& EntryPoint,
 	                                    const std::string& Target, ComPointer<ID3DBlob>& ShaderBlob) const;
+	void SetViewportAndScissor(uint32_t Width, uint32_t Height);
 
 private:
 	FGraphicsDeviceSettings Settings;
@@ -65,17 +81,11 @@ private:
 
 	std::shared_ptr<FSwapChain> SwapChain;
 
-	ComPointer<ID3DBlob> VertexShaderBlob;
-	ComPointer<ID3DBlob> PixelShaderBlob;
-
 	ComPointer<ID3D12RootSignature> RootSignature;
 	ComPointer<ID3D12PipelineState> PipelineState;
 
-	ComPointer<ID3D12Resource2> VertexBuffer;
-	D3D12_VERTEX_BUFFER_VIEW VertexBufferView{};
-
-	ComPointer<ID3D12Resource2> IndexBuffer;
-	D3D12_INDEX_BUFFER_VIEW IndexBufferView{};
+	std::shared_ptr<FVertexBuffer> VertexBuffer;
+	std::shared_ptr<FIndexBuffer> IndexBuffer;
 
 	D3D12_VIEWPORT Viewport{};
 	D3D12_RECT ScissorRect{};

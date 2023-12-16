@@ -146,6 +146,7 @@ function sb_copy_dll_from_project(project_name, directory)
     postbuildcommands {
       ('{COPY} ' .. build_output_directory .. '/' .. project_name .. '/*.pdb "' .. directory .. '"')
     }
+  sb_reset_filter()
 end
 
 function sb_copy_dll_to_directory(directory)
@@ -156,6 +157,7 @@ function sb_copy_dll_to_directory(directory)
     postbuildcommands {
       ('{COPY} ' .. build_output_directory .. '/%{prj.name}/*.pdb "' .. directory .. '"')
     }
+  sb_reset_filter()
 end
 
 function sb_runtime_executable(name)
