@@ -114,7 +114,7 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	SwapChainDesc.Width = 1280;
 	SwapChainDesc.Height = 720;
 	SwapChainDesc.BufferCount = static_cast<uint32_t>(Settings.BufferingMode);
-	SwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	SwapChainDesc.Format = Settings.Format;
 	SwapChainDesc.Window = Settings.Window;
 	SwapChain = std::make_shared<FSwapChain>(this, SwapChainDesc);
 
@@ -154,7 +154,7 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	PipelineDesc.PS = PixelShaderByteCode;
 	PipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	PipelineDesc.NumRenderTargets = 1;
-	PipelineDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	PipelineDesc.RTVFormats[0] = Settings.Format;
 	PipelineDesc.SampleDesc.Count = 1;
 	PipelineDesc.SampleDesc.Quality = 0;
 	PipelineDesc.SampleMask = 0xffffffff;

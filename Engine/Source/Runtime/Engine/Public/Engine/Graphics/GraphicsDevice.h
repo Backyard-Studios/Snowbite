@@ -13,6 +13,7 @@ struct SNOWBITE_API FGraphicsDeviceSettings
 	bool bEnableDebugLayer = false;
 	bool bEnableGPUValidation = false;
 	D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
+	DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	EBufferingMode BufferingMode = EBufferingMode::TripleBuffering;
 	std::shared_ptr<FWindow> Window;
 };
