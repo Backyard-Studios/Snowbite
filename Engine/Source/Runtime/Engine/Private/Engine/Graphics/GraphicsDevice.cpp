@@ -3,6 +3,8 @@
 #include <Engine/Graphics/GraphicsDevice.h>
 
 #include <filesystem>
+#include <backends/imgui_impl_win32.h>
+#include <backends/imgui_impl_dx12.h>
 
 // ReSharper disable CppNonInlineVariableDefinitionInHeaderFile
 extern "C" {
@@ -113,6 +115,17 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	SB_D3D_ASSERT(DescriptorHeapCreateResult, "Failed to create descriptor heap");
 	RtvDescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
+	D3D12_DESCRIPTOR_HEAP_DESC SrvDescriptorHeapDesc;
+	SrvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	SrvDescriptorHeapDesc.NumDescriptors = 1;
+	SrvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	SrvDescriptorHeapDesc.NodeMask = 0;
+	const HRESULT SrvDescriptorHeapCreateResult = Device->CreateDescriptorHeap(
+		&SrvDescriptorHeapDesc, IID_PPV_ARGS(&SrvDescriptorHeap));
+	SB_D3D_ASSERT(SrvDescriptorHeapCreateResult, "Failed to create descriptor heap");
+	SrvDescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+
 	FSwapChainDesc SwapChainDesc;
 	SwapChainDesc.Width = 1280;
 	SwapChainDesc.Height = 720;
@@ -202,11 +215,32 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	IndexBuffer->Upload(CommandList);
 
 	SetViewportAndScissor(Settings.Window->GetState().Width, Settings.Window->GetState().Height);
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+	io.DisplaySize = ImVec2(static_cast<float>(Settings.Window->GetState().Width),
+	                        static_cast<float>(Settings.Window->GetState().Height));
+
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplWin32_Init(Settings.Window->GetHandle());
+	ImGui_ImplDX12_Init(Device, static_cast<uint32_t>(Settings.BufferingMode),
+	                    Settings.Format, SrvDescriptorHeap,
+	                    SrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+	                    SrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 }
 
 FGraphicsDevice::~FGraphicsDevice()
 {
 	Flush(static_cast<uint32_t>(Settings.BufferingMode));
+
+	ImGui_ImplDX12_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
+
 	SB_SAFE_RESET(IndexBuffer);
 	SB_SAFE_RESET(VertexBuffer);
 	PipelineState.Release();
@@ -224,6 +258,7 @@ FGraphicsDevice::~FGraphicsDevice()
 		CommandAllocator.Release();
 	CommandAllocators.clear();
 	SB_SAFE_RESET(SwapChain);
+	SrvDescriptorHeap.Release();
 	RtvDescriptorHeap.Release();
 	CommandQueue.Release();
 	Device.Release();
@@ -260,6 +295,9 @@ void FGraphicsDevice::Resize(const uint32_t InWidth, const uint32_t InHeight)
 	Flush(static_cast<uint32_t>(Settings.BufferingMode));
 	SwapChain->Resize(InWidth, InHeight);
 	SetViewportAndScissor(InWidth, InHeight);
+	ImGuiIO& io = ImGui::GetIO();
+	io.DisplaySize = ImVec2(static_cast<float>(Settings.Window->GetState().Width),
+	                        static_cast<float>(Settings.Window->GetState().Height));
 }
 
 std::shared_ptr<FVertexBuffer> FGraphicsDevice::CreateVertexBuffer(FVertex* Vertices, uint32_t Count)
@@ -272,7 +310,7 @@ std::shared_ptr<FIndexBuffer> FGraphicsDevice::CreateIndexBuffer(FIndex* Indices
 	return std::make_shared<FIndexBuffer>(this, Indices, Count);
 }
 
-void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor) const
+void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 {
 	ComPointer<ID3D12CommandAllocator> CommandAllocator = CommandAllocators[SwapChain->GetFrameIndex()];
 	const HRESULT ResetCommandAllocatorResult = CommandAllocator->Reset();
@@ -296,9 +334,23 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor) const
 	CommandList->ClearRenderTargetView(BackBufferDescriptor, ClearColorArray, 0, nullptr);
 	CommandList->OMSetRenderTargets(1, &BackBufferDescriptor, FALSE, nullptr);
 
+	CommandList->SetDescriptorHeaps(1, &SrvDescriptorHeap);
+
 	CommandList->RSSetViewports(1, &Viewport);
 	CommandList->RSSetScissorRects(1, &ScissorRect);
 	CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::Begin("Snowbite");
+	{
+		ImGui::Text(std::format("Snowbite v{}.{}.{}-{}", SNOWBITE_VERSION_MAJOR, SNOWBITE_VERSION_MINOR,
+		                        SNOWBITE_VERSION_PATCH, SNOWBITE_VERSION_BRANCH).c_str());
+		ImGui::Text(std::format("FPS: {}", ImGui::GetIO().Framerate).c_str());
+	}
+	ImGui::End();
 
 	FDrawCall DrawCall;
 	DrawCall.RootSignature = RootSignature;
@@ -311,6 +363,9 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor) const
 void FGraphicsDevice::EndFrame()
 {
 	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists[SwapChain->GetFrameIndex()];
+
+	ImGui::Render();
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), CommandList);
 
 	D3D12_RESOURCE_BARRIER Barrier;
 	Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;

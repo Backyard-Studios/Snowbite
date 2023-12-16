@@ -11,3 +11,4 @@ group 'GameModules'
 
 group 'ThirdParty'
   include 'Projects/spdlog.lua'
+  include 'Projects/imgui.lua'

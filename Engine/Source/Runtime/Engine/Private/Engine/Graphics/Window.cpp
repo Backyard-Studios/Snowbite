@@ -2,6 +2,7 @@
 
 #include <Engine/Graphics/Window.h>
 
+#include <backends/imgui_impl_win32.h>
 #include <format>
 #include <string>
 
@@ -133,8 +134,13 @@ void FWindow::OnClose()
 		OnCloseCallback();
 }
 
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 LRESULT FWindow::WindowProc(const HWND WindowHandle, const UINT Message, const WPARAM WParam, const LPARAM LParam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(WindowHandle, Message, WParam, LParam))
+		return true;
+
 	FWindow* Window = reinterpret_cast<FWindow*>(GetWindowLongPtr(WindowHandle, GWLP_USERDATA));
 	switch (Message)
 	{

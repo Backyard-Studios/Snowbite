@@ -43,7 +43,7 @@ public:
 	std::shared_ptr<FVertexBuffer> CreateVertexBuffer(FVertex* Vertices, uint32_t Count);
 	std::shared_ptr<FIndexBuffer> CreateIndexBuffer(FIndex* Indices, uint32_t Count);
 
-	void BeginFrame(const FClearColor& ClearColor) const;
+	void BeginFrame(const FClearColor& ClearColor);
 	void EndFrame();
 
 	void Draw(FDrawCall& DrawCall) const;
@@ -78,6 +78,9 @@ private:
 
 	ComPointer<ID3D12DescriptorHeap> RtvDescriptorHeap;
 	uint32_t RtvDescriptorSize = 0;
+
+	ComPointer<ID3D12DescriptorHeap> SrvDescriptorHeap;
+	uint32_t SrvDescriptorSize = 0;
 
 	std::shared_ptr<FSwapChain> SwapChain;
 
