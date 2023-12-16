@@ -56,6 +56,10 @@ After that execute the `InitializeWorkspace.bat` file inside of the `Scripts` fo
 
 </details>
 
+## 📚 Roadmap
+
+See [Roadmap](./Roadmap.md) for more information.
+
 ## 📜 License
 
 See [LICENSE](./LICENSE) for more information.
