@@ -12,13 +12,15 @@ struct VS_OUTPUT
 
 cbuffer DefaultConstantBuffer : register(b0)
 {
-	float Offset;
+	float OffsetX;
+	float OffsetY;
+	float OffsetZ;
 };
 
 VS_OUTPUT main(VS_INPUT input)
 {
 	VS_OUTPUT output;
-	output.pos = float4(input.pos.x + Offset, input.pos.y, input.pos.z, 1.0f);
+	output.pos = float4(input.pos.x + OffsetX, input.pos.y + OffsetY, input.pos.z + OffsetZ, 1.0f);
 	output.color = input.color;
 	return output;
 }

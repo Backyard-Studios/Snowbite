@@ -6,7 +6,7 @@
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx12.h>
 
-#include "../../../Public/Engine/Graphics/Shader.h"
+#include <Engine/Graphics/Shader.h>
 
 // ReSharper disable CppNonInlineVariableDefinitionInHeaderFile
 extern "C" {
@@ -447,7 +447,15 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 	ImGui::NewFrame();
 
 	ImGui::Begin("Debug");
-	ImGui::SliderFloat("Offset", &ConstantBuffer.Offset, -1.0f, 1.0f);
+	ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
+	static float FPS[1000];
+	static int FPSIndex = 0;
+	FPS[FPSIndex] = ImGui::GetIO().Framerate;
+	FPSIndex = (FPSIndex + 1) % 1000;
+	ImGui::PlotLines("FPS", FPS, 1000, FPSIndex, nullptr, 0.0f, 1300.0f, ImVec2(0, 80));
+	ImGui::SliderFloat("Offset X", &ConstantBuffer.OffsetX, -1.0f, 1.0f);
+	ImGui::SliderFloat("Offset Y", &ConstantBuffer.OffsetY, -1.0f, 1.0f);
+	ImGui::SliderFloat("Offset Z", &ConstantBuffer.OffsetZ, -1.0f, 1.0f);
 	ImGui::End();
 }
 

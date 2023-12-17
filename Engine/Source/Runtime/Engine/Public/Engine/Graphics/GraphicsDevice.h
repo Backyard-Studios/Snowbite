@@ -30,7 +30,9 @@ struct SNOWBITE_API FDrawCall
 
 struct SNOWBITE_API FConstantBuffer
 {
-	float Offset = 0.5f;
+	float OffsetX = 0.0f;
+	float OffsetY = 0.0f;
+	float OffsetZ = 0.0f;
 };
 
 class SNOWBITE_API FGraphicsDevice
