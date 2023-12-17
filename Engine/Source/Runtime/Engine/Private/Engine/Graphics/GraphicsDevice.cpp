@@ -334,6 +334,15 @@ FGraphicsDevice::~FGraphicsDevice()
 	RootSignature.Release();
 	if (FenceEvent)
 		CloseHandle(FenceEvent);
+	for (const void* ConstantBufferUploadHeapPointer : ConstantBufferUploadHeapPointers)
+		ConstantBufferUploadHeapPointer = nullptr;
+	ConstantBufferUploadHeapPointers.clear();
+	for (ComPointer<ID3D12Resource2>& ConstantBufferUploadHeap : ConstantBufferUploadHeaps)
+		ConstantBufferUploadHeap.Release();
+	ConstantBufferUploadHeaps.clear();
+	for (ComPointer<ID3D12DescriptorHeap>& ConstantBufferDescriptorHeap : ConstantBufferDescriptorHeaps)
+		ConstantBufferDescriptorHeap.Release();
+	ConstantBufferDescriptorHeaps.clear();
 	FenceValues.clear();
 	for (ComPointer<ID3D12Fence1>& Fence : Fences)
 		Fence.Release();
@@ -344,6 +353,7 @@ FGraphicsDevice::~FGraphicsDevice()
 	for (ComPointer<ID3D12CommandAllocator>& CommandAllocator : CommandAllocators)
 		CommandAllocator.Release();
 	CommandAllocators.clear();
+	DepthStencilBuffer.Release();
 	SB_SAFE_RESET(SwapChain);
 	DepthStencilBuffer.Release();
 	DsDescriptorHeap.Release();
