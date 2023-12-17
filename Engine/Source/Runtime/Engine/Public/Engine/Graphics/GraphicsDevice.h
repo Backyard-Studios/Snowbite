@@ -62,7 +62,7 @@ private:
 private:
 	FGraphicsDeviceSettings Settings;
 	uint32_t BufferCount;
-	
+
 	ComPointer<IDXGIFactory7> Factory;
 
 	ComPointer<ID3D12Debug6> DebugController;

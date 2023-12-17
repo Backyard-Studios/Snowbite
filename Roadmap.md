@@ -3,7 +3,7 @@
 - [x] Logging
 - [x] Windowing
 - [ ] **_Basic Rendering (Triangle, Camera, ...)_**
-- [ ] ImGui Integration
+- [x] ImGui Integration
 - [ ] Input
 - [ ] Application Abstraction
 - [ ] Layer Based Architecture

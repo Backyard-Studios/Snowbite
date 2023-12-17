@@ -6,6 +6,8 @@
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx12.h>
 
+#include "../../../Public/Engine/Graphics/Shader.h"
+
 // ReSharper disable CppNonInlineVariableDefinitionInHeaderFile
 extern "C" {
 // http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf
@@ -147,12 +149,10 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	SB_D3D_ASSERT(CreateRootSignatureResult, "Failed to create root signature");
 	RootSignatureBlob.Release();
 
-	ComPointer<ID3DBlob> VertexShaderBlob;
-	ComPointer<ID3DBlob> PixelShaderBlob;
-	D3D12_SHADER_BYTECODE VertexShaderByteCode = CompileShader(L"Assets/Shaders/default.vert.hlsl", "main", "vs_5_0",
-	                                                           VertexShaderBlob);
-	D3D12_SHADER_BYTECODE PixelShaderByteCode = CompileShader(L"Assets/Shaders/default.pixl.hlsl", "main", "ps_5_0",
-	                                                          PixelShaderBlob);
+	std::unique_ptr<FShader> VertexShader = std::make_unique<FShader>("Assets/Shaders/default.vert.hlsl",
+	                                                                  EShaderType::Vertex);
+	std::unique_ptr<FShader> PixelShader = std::make_unique<FShader>("Assets/Shaders/default.pixl.hlsl",
+	                                                                 EShaderType::Pixel);
 
 	D3D12_INPUT_ELEMENT_DESC InputElementDescs[] =
 	{
@@ -170,8 +170,8 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC PipelineDesc = {};
 	PipelineDesc.InputLayout = InputLayoutDesc;
 	PipelineDesc.pRootSignature = RootSignature.Get();
-	PipelineDesc.VS = VertexShaderByteCode;
-	PipelineDesc.PS = PixelShaderByteCode;
+	PipelineDesc.VS = VertexShader->GetBytecode();
+	PipelineDesc.PS = PixelShader->GetBytecode();
 	PipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	PipelineDesc.NumRenderTargets = 1;
 	PipelineDesc.RTVFormats[0] = Settings.Format;
@@ -187,8 +187,10 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 
 	HRESULT PipelineCreateResult = Device->CreateGraphicsPipelineState(&PipelineDesc, IID_PPV_ARGS(&PipelineState));
 	SB_D3D_ASSERT(PipelineCreateResult, "Failed to create pipeline state");
-	VertexShaderBlob.Release();
-	PixelShaderBlob.Release();
+
+	SB_SAFE_RESET(VertexShader);
+	SB_SAFE_RESET(PixelShader);
+
 	PipelineState->SetName(L"Default pipeline state");
 	RootSignature->SetName(L"Default root signature");
 
