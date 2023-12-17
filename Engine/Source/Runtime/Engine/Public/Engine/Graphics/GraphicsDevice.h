@@ -59,6 +59,8 @@ private:
 	                                    const std::string& Target, ComPointer<ID3DBlob>& ShaderBlob) const;
 	void SetViewportAndScissor(uint32_t Width, uint32_t Height);
 
+	void CreateDepthStencilBuffer(uint32_t Width, uint32_t Height);
+
 private:
 	FGraphicsDeviceSettings Settings;
 	uint32_t BufferCount;
@@ -82,6 +84,11 @@ private:
 
 	ComPointer<ID3D12DescriptorHeap> SrvDescriptorHeap;
 	uint32_t SrvDescriptorSize = 0;
+
+	ComPointer<ID3D12DescriptorHeap> DsDescriptorHeap;
+	uint32_t DsDescriptorSize = 0;
+
+	ComPointer<ID3D12Resource2> DepthStencilBuffer;
 
 	std::shared_ptr<FSwapChain> SwapChain;
 

@@ -127,6 +127,16 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	SB_D3D_ASSERT(SrvDescriptorHeapCreateResult, "Failed to create descriptor heap");
 	SrvDescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+	D3D12_DESCRIPTOR_HEAP_DESC DsDescriptorHeapDesc;
+	DsDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	DsDescriptorHeapDesc.NumDescriptors = 1;
+	DsDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	DsDescriptorHeapDesc.NodeMask = 0;
+	const HRESULT DsDescriptorHeapCreateResult = Device->CreateDescriptorHeap(
+		&DsDescriptorHeapDesc, IID_PPV_ARGS(&DsDescriptorHeap));
+	SB_D3D_ASSERT(DsDescriptorHeapCreateResult, "Failed to create descriptor heap");
+	DsDescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
 	FSwapChainDesc SwapChainDesc;
 	SwapChainDesc.Width = Settings.Window->GetState().Width;
 	SwapChainDesc.Height = Settings.Window->GetState().Height;
@@ -135,88 +145,103 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	SwapChainDesc.Window = Settings.Window;
 	SwapChain = std::make_shared<FSwapChain>(this, SwapChainDesc);
 
-	CD3DX12_ROOT_SIGNATURE_DESC RootSignatureDesc;
-	RootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CreateDepthStencilBuffer(Settings.Window->GetState().Width, Settings.Window->GetState().Height);
 
-	ComPointer<ID3DBlob> RootSignatureBlob;
-	HRESULT RootSignatureSerializeResult = D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1,
-	                                                                   &RootSignatureBlob, nullptr);
-	SB_D3D_ASSERT(RootSignatureSerializeResult, "Failed to serialize root signature");
-
-	HRESULT CreateRootSignatureResult = Device->CreateRootSignature(0, RootSignatureBlob->GetBufferPointer(),
-	                                                                RootSignatureBlob->GetBufferSize(),
-	                                                                IID_PPV_ARGS(&RootSignature));
-	SB_D3D_ASSERT(CreateRootSignatureResult, "Failed to create root signature");
-	RootSignatureBlob.Release();
-
-	std::unique_ptr<FShader> VertexShader = std::make_unique<FShader>("Assets/Shaders/default.vert.hlsl",
-	                                                                  EShaderType::Vertex);
-	std::unique_ptr<FShader> PixelShader = std::make_unique<FShader>("Assets/Shaders/default.pixl.hlsl",
-	                                                                 EShaderType::Pixel);
-
-	D3D12_INPUT_ELEMENT_DESC InputElementDescs[] =
+	// TODO: Temporary until we have a proper asset pipeline
 	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		CD3DX12_ROOT_SIGNATURE_DESC RootSignatureDesc;
+		RootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		ComPointer<ID3DBlob> RootSignatureBlob;
+		HRESULT RootSignatureSerializeResult = D3D12SerializeRootSignature(
+			&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			&RootSignatureBlob, nullptr);
+		SB_D3D_ASSERT(RootSignatureSerializeResult, "Failed to serialize root signature");
+
+		HRESULT CreateRootSignatureResult = Device->CreateRootSignature(0, RootSignatureBlob->GetBufferPointer(),
+		                                                                RootSignatureBlob->GetBufferSize(),
+		                                                                IID_PPV_ARGS(&RootSignature));
+		SB_D3D_ASSERT(CreateRootSignatureResult, "Failed to create root signature");
+		RootSignatureBlob.Release();
+
+		std::unique_ptr<FShader> VertexShader = std::make_unique<FShader>("Assets/Shaders/default.vert.hlsl",
+		                                                                  EShaderType::Vertex);
+		std::unique_ptr<FShader> PixelShader = std::make_unique<FShader>("Assets/Shaders/default.pixl.hlsl",
+		                                                                 EShaderType::Pixel);
+
+		D3D12_INPUT_ELEMENT_DESC InputElementDescs[] =
 		{
-			"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(FVector3), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-			0
-		},
-	};
+			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{
+				"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(FVector3),
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+				0
+			},
+		};
 
-	D3D12_INPUT_LAYOUT_DESC InputLayoutDesc;
-	InputLayoutDesc.NumElements = _countof(InputElementDescs);
-	InputLayoutDesc.pInputElementDescs = InputElementDescs;
+		D3D12_INPUT_LAYOUT_DESC InputLayoutDesc;
+		InputLayoutDesc.NumElements = _countof(InputElementDescs);
+		InputLayoutDesc.pInputElementDescs = InputElementDescs;
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC PipelineDesc = {};
-	PipelineDesc.InputLayout = InputLayoutDesc;
-	PipelineDesc.pRootSignature = RootSignature.Get();
-	PipelineDesc.VS = VertexShader->GetBytecode();
-	PipelineDesc.PS = PixelShader->GetBytecode();
-	PipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	PipelineDesc.NumRenderTargets = 1;
-	PipelineDesc.RTVFormats[0] = Settings.Format;
-	PipelineDesc.SampleDesc.Count = 1;
-	PipelineDesc.SampleDesc.Quality = 0;
-	PipelineDesc.SampleMask = 0xffffffff;
-	PipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	PipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	// PipelineDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	PipelineDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	PipelineDesc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-	PipelineDesc.NodeMask = 0;
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC PipelineDesc = {};
+		PipelineDesc.InputLayout = InputLayoutDesc;
+		PipelineDesc.pRootSignature = RootSignature.Get();
+		PipelineDesc.VS = VertexShader->GetBytecode();
+		PipelineDesc.PS = PixelShader->GetBytecode();
+		PipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		PipelineDesc.NumRenderTargets = 1;
+		PipelineDesc.RTVFormats[0] = Settings.Format;
+		PipelineDesc.SampleDesc.Count = 1;
+		PipelineDesc.SampleDesc.Quality = 0;
+		PipelineDesc.SampleMask = 0xffffffff;
+		PipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		PipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		PipelineDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		PipelineDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+		PipelineDesc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+		PipelineDesc.NodeMask = 0;
 
-	HRESULT PipelineCreateResult = Device->CreateGraphicsPipelineState(&PipelineDesc, IID_PPV_ARGS(&PipelineState));
-	SB_D3D_ASSERT(PipelineCreateResult, "Failed to create pipeline state");
+		HRESULT PipelineCreateResult = Device->CreateGraphicsPipelineState(&PipelineDesc, IID_PPV_ARGS(&PipelineState));
+		SB_D3D_ASSERT(PipelineCreateResult, "Failed to create pipeline state");
 
-	SB_SAFE_RESET(VertexShader);
-	SB_SAFE_RESET(PixelShader);
+		SB_SAFE_RESET(VertexShader);
+		SB_SAFE_RESET(PixelShader);
 
-	PipelineState->SetName(L"Default pipeline state");
-	RootSignature->SetName(L"Default root signature");
+		PipelineState->SetName(L"Default pipeline state");
+		RootSignature->SetName(L"Default root signature");
 
-	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists.at(0);
-	CommandList->Reset(CommandAllocators.at(0).Get(), nullptr);
+		ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists.at(0);
+		CommandList->Reset(CommandAllocators.at(0).Get(), nullptr);
 
-	FVertex Vertices[] = {
-		{{-0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}}, // top left
-		{{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}}, // bottom right
-		{{-0.5f, -0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}, // bottom left
-		{{0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}}, // top right
-	};
-	VertexBuffer = std::make_unique<FVertexBuffer>(this, Vertices, _countof(Vertices));
-	VertexBuffer->Upload(CommandList);
+		FVertex Vertices[] = {
+			// first quad (closer to camera, blue)
+			{-0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f},
+			{0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f},
+			{-0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f},
+			{0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f},
 
-	CommandList->Reset(CommandAllocators.at(0).Get(), nullptr);
+			// second quad (further from camera, green)
+			{-0.75f, 0.75f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
+			{0.0f, 0.0f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
+			{-0.75f, 0.0f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
+			{0.0f, 0.75f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f}
+		};
+		VertexBuffer = std::make_unique<FVertexBuffer>(this, Vertices, _countof(Vertices));
+		VertexBuffer->Upload(CommandList);
 
-	FIndex Indices[] = {
-		0, 1, 2,
-		0, 3, 1,
-	};
-	IndexBuffer = std::make_unique<FIndexBuffer>(this, Indices, _countof(Indices));
-	IndexBuffer->Upload(CommandList);
+		CommandList->Reset(CommandAllocators.at(0).Get(), nullptr);
+
+		FIndex Indices[] = {
+			0, 1, 2,
+			0, 3, 1,
+		};
+		IndexBuffer = std::make_unique<FIndexBuffer>(this, Indices, _countof(Indices));
+		IndexBuffer->Upload(CommandList);
+	}
 
 	SetViewportAndScissor(Settings.Window->GetState().Width, Settings.Window->GetState().Height);
 
+	// TODO: Temporary -> move to own class
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
@@ -259,6 +284,8 @@ FGraphicsDevice::~FGraphicsDevice()
 		CommandAllocator.Release();
 	CommandAllocators.clear();
 	SB_SAFE_RESET(SwapChain);
+	DepthStencilBuffer.Release();
+	DsDescriptorHeap.Release();
 	SrvDescriptorHeap.Release();
 	RtvDescriptorHeap.Release();
 	CommandQueue.Release();
@@ -330,10 +357,15 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 	Barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	CommandList->ResourceBarrier(1, &Barrier);
 
-	const float ClearColorArray[] = {ClearColor.Red, ClearColor.Green, ClearColor.Blue, ClearColor.Alpha};
+
 	const D3D12_CPU_DESCRIPTOR_HANDLE BackBufferDescriptor = SwapChain->GetBackBufferDescriptor();
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE DsvHandle(DsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	CommandList->OMSetRenderTargets(1, &BackBufferDescriptor, FALSE, &DsvHandle);
+
+	const float ClearColorArray[] = {ClearColor.Red, ClearColor.Green, ClearColor.Blue, ClearColor.Alpha};
 	CommandList->ClearRenderTargetView(BackBufferDescriptor, ClearColorArray, 0, nullptr);
-	CommandList->OMSetRenderTargets(1, &BackBufferDescriptor, FALSE, nullptr);
+	CommandList->ClearDepthStencilView(DsDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH,
+	                                   1.0f, 0, 0, nullptr);
 
 	CommandList->SetDescriptorHeaps(1, &SrvDescriptorHeap);
 
@@ -345,22 +377,13 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::Begin("Snowbite");
-	{
-		ImGui::Text(std::format("FPS: {}", ImGui::GetIO().Framerate).c_str());
-		ImGui::Text(std::format("Frame time: {} ms", 1000.0f / ImGui::GetIO().Framerate).c_str());
-		ImGui::Text(std::format("Buffering mode: {}", GetBufferingModeName(Settings.BufferingMode)).c_str());
-		ImGui::Text(std::format("Window size: {}x{}", Settings.Window->GetState().Width,
-		                        Settings.Window->GetState().Height).c_str());
-	}
-	ImGui::End();
-
 	FDrawCall DrawCall;
 	DrawCall.RootSignature = RootSignature;
 	DrawCall.PipelineState = PipelineState;
 	DrawCall.VertexBuffer = VertexBuffer;
 	DrawCall.IndexBuffer = IndexBuffer;
 	Draw(DrawCall);
+	CommandList->DrawIndexedInstanced(6, 1, 0, 4, 0);
 }
 
 void FGraphicsDevice::EndFrame()
@@ -443,4 +466,34 @@ void FGraphicsDevice::SetViewportAndScissor(const uint32_t Width, const uint32_t
 	ScissorRect.top = 0;
 	ScissorRect.right = Width;
 	ScissorRect.bottom = Height;
+}
+
+void FGraphicsDevice::CreateDepthStencilBuffer(const uint32_t Width, const uint32_t Height)
+{
+	D3D12_CLEAR_VALUE DepthStencilClearValue;
+	DepthStencilClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	DepthStencilClearValue.DepthStencil.Depth = 1.0f;
+	DepthStencilClearValue.DepthStencil.Stencil = 0;
+
+	const CD3DX12_HEAP_PROPERTIES DepthStencilHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+	const CD3DX12_RESOURCE_DESC DepthStencilResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT,
+		Width,
+		Height,
+		1, 1, 1, 0,
+		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+	const HRESULT CreateDepthStencilResult = Device->CreateCommittedResource(&DepthStencilHeapProperties,
+	                                                                         D3D12_HEAP_FLAG_NONE,
+	                                                                         &DepthStencilResourceDesc,
+	                                                                         D3D12_RESOURCE_STATE_DEPTH_WRITE,
+	                                                                         &DepthStencilClearValue,
+	                                                                         IID_PPV_ARGS(&DepthStencilBuffer));
+	SB_D3D_ASSERT(CreateDepthStencilResult, "Failed to create depth stencil buffer");
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc;
+	DepthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	DepthStencilViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	DepthStencilViewDesc.Flags = D3D12_DSV_FLAG_NONE;
+	DepthStencilViewDesc.Texture2D.MipSlice = 0;
+	Device->CreateDepthStencilView(DepthStencilBuffer.Get(), &DepthStencilViewDesc,
+	                               DsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 }
