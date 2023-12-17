@@ -6,6 +6,7 @@
 
 #include "BufferingMode.h"
 #include "ClearColor.h"
+#include "CommandList.h"
 #include "Fence.h"
 #include "IndexBuffer.h"
 #include "SwapChain.h"
@@ -48,7 +49,7 @@ public:
 	std::shared_ptr<FIndexBuffer> CreateIndexBuffer(FIndex* Indices, uint32_t Count);
 
 	void BeginFrame(const FClearColor& ClearColor);
-	void EndFrame();
+	void EndFrame() const;
 
 	void Draw(const FDrawCall& DrawCall) const;
 
@@ -80,8 +81,7 @@ private:
 	ComPointer<ID3D12Device10> Device;
 	ComPointer<ID3D12CommandQueue> CommandQueue;
 
-	std::vector<ComPointer<ID3D12CommandAllocator>> CommandAllocators;
-	std::vector<ComPointer<ID3D12GraphicsCommandList7>> CommandLists;
+	std::vector<std::shared_ptr<FCommandList>> CommandLists;
 	std::vector<std::shared_ptr<FFence>> Fences;
 
 	ComPointer<ID3D12DescriptorHeap> RtvDescriptorHeap;

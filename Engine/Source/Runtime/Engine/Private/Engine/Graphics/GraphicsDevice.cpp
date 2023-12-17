@@ -81,25 +81,16 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	const HRESULT CommandQueueCreateResult = Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&CommandQueue));
 	SB_D3D_ASSERT(CommandQueueCreateResult, "Failed to create command queue");
 
-	CommandAllocators.resize(BufferCount);
-	CommandLists.resize(BufferCount);
+	CommandLists.reserve(BufferCount);
 	Fences.reserve(BufferCount);
 	ConstantBufferDescriptorHeaps.resize(BufferCount);
 	ConstantBufferUploadHeaps.resize(BufferCount);
 	ConstantBufferUploadHeapPointers.resize(BufferCount);
 	for (uint32_t Index = 0; Index < BufferCount; ++Index)
 	{
-		const HRESULT CommandAllocatorCreateResult = Device->CreateCommandAllocator(
-			D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&CommandAllocators[Index]));
-		SB_D3D_ASSERT(CommandAllocatorCreateResult, "Failed to create command allocator");
-		CommandAllocators[Index]->SetName((L"Command Allocator Frame " + std::to_wstring(Index)).c_str());
-
-		const HRESULT CommandListCreateResult = Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-		                                                                  CommandAllocators[Index].Get(), nullptr,
-		                                                                  IID_PPV_ARGS(&CommandLists[Index]));
-		SB_D3D_ASSERT(CommandListCreateResult, "Failed to create command list");
-		CommandLists[Index]->Close();
-		CommandLists[Index]->SetName((L"Command List Frame " + std::to_wstring(Index)).c_str());
+		CommandLists.push_back(std::make_shared<FCommandList>(Device, D3D12_COMMAND_LIST_TYPE_DIRECT, true,
+		                                                      ("Command List Frame " +
+			                                                      std::to_string(Index)).c_str()));
 
 		Fences.push_back(std::make_shared<FFence>(Device));
 
@@ -265,8 +256,8 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 		PipelineState->SetName(L"Default pipeline state");
 		RootSignature->SetName(L"Default root signature");
 
-		ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists.at(0);
-		CommandList->Reset(CommandAllocators.at(0).Get(), nullptr);
+		std::shared_ptr<FCommandList> CommandList = CommandLists.at(0);
+		CommandList->Reset();
 
 		FVertex Vertices[] = {
 			// first quad (closer to camera, blue)
@@ -282,16 +273,16 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 			{0.0f, 0.75f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f}
 		};
 		VertexBuffer = std::make_unique<FVertexBuffer>(this, Vertices, _countof(Vertices));
-		VertexBuffer->Upload(CommandList);
+		VertexBuffer->Upload(CommandList->GetNativeList());
 
-		CommandList->Reset(CommandAllocators.at(0).Get(), nullptr);
+		CommandList->Reset();
 
 		FIndex Indices[] = {
 			0, 1, 2,
 			0, 3, 1,
 		};
 		IndexBuffer = std::make_unique<FIndexBuffer>(this, Indices, _countof(Indices));
-		IndexBuffer->Upload(CommandList);
+		IndexBuffer->Upload(CommandList->GetNativeList());
 	}
 
 	SetViewportAndScissor(Settings.Window->GetState().Width, Settings.Window->GetState().Height);
@@ -337,12 +328,9 @@ FGraphicsDevice::~FGraphicsDevice()
 	for (std::shared_ptr<FFence>& TestFence : Fences)
 		TestFence.reset();
 	Fences.clear();
-	for (ComPointer<ID3D12GraphicsCommandList7>& CommandList : CommandLists)
-		CommandList.Release();
+	for (std::shared_ptr<FCommandList>& TestCommandList : CommandLists)
+		TestCommandList.reset();
 	CommandLists.clear();
-	for (ComPointer<ID3D12CommandAllocator>& CommandAllocator : CommandAllocators)
-		CommandAllocator.Release();
-	CommandAllocators.clear();
 	ReleaseDepthStencilBuffer();
 	SB_SAFE_RESET(SwapChain);
 	DepthStencilBuffer.Release();
@@ -403,13 +391,10 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 	if (bIsResizing)
 		return;
 	const uint32_t FrameIndex = SwapChain->GetFrameIndex();
-	ComPointer<ID3D12CommandAllocator> CommandAllocator = CommandAllocators[FrameIndex];
-	const HRESULT ResetCommandAllocatorResult = CommandAllocator->Reset();
-	SB_D3D_ASSERT(ResetCommandAllocatorResult, "Failed to reset command allocator");
 
-	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists[FrameIndex];
-	const HRESULT ResetCommandListResult = CommandList->Reset(CommandAllocator.Get(), nullptr);
-	SB_D3D_ASSERT(ResetCommandListResult, "Failed to reset command list");
+	const std::shared_ptr<FCommandList> CommandListWrapper = CommandLists[FrameIndex];
+	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandListWrapper->GetNativeList();
+	CommandListWrapper->Reset();
 
 	D3D12_RESOURCE_BARRIER Barrier;
 	Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -466,11 +451,14 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 	ImGui::End();
 }
 
-void FGraphicsDevice::EndFrame()
+void FGraphicsDevice::EndFrame() const
 {
 	if (bIsResizing)
 		return;
-	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists[SwapChain->GetFrameIndex()];
+	const uint32_t FrameIndex = SwapChain->GetFrameIndex();
+
+	const std::shared_ptr<FCommandList> CommandListWrapper = CommandLists[FrameIndex];
+	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandListWrapper->GetNativeList();
 
 	ImGui::Render();
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), CommandList);
@@ -484,16 +472,13 @@ void FGraphicsDevice::EndFrame()
 	Barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 	CommandList->ResourceBarrier(1, &Barrier);
 
-	const HRESULT CloseCommandListResult = CommandList->Close();
-	SB_D3D_ASSERT(CloseCommandListResult, "Failed to close command list");
-
-	ExecuteCommandList(CommandList);
+	CommandListWrapper->Execute(CommandQueue, Fences[FrameIndex]);
 	SwapChain->Present(true);
 }
 
 void FGraphicsDevice::Draw(const FDrawCall& DrawCall) const
 {
-	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists[SwapChain->GetFrameIndex()];
+	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists[SwapChain->GetFrameIndex()]->GetNativeList();
 	const D3D12_VERTEX_BUFFER_VIEW VertexBufferView = DrawCall.VertexBuffer->GetView();
 	CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
 	const D3D12_INDEX_BUFFER_VIEW IndexBufferView = DrawCall.IndexBuffer->GetView();
