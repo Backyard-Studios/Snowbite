@@ -125,10 +125,9 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	SB_D3D_ASSERT(SrvDescriptorHeapCreateResult, "Failed to create descriptor heap");
 	SrvDescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-
 	FSwapChainDesc SwapChainDesc;
-	SwapChainDesc.Width = 1280;
-	SwapChainDesc.Height = 720;
+	SwapChainDesc.Width = Settings.Window->GetState().Width;
+	SwapChainDesc.Height = Settings.Window->GetState().Height;
 	SwapChainDesc.BufferCount = static_cast<uint32_t>(Settings.BufferingMode);
 	SwapChainDesc.Format = Settings.Format;
 	SwapChainDesc.Window = Settings.Window;
