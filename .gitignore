@@ -59,3 +59,5 @@ Engine/Development/__pycache__
 *.dmp
 *.dump
 *.stackdump
+
+imgui.ini

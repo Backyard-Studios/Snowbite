@@ -18,8 +18,9 @@ _declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x00000001;
 // ReSharper enable CppNonInlineVariableDefinitionInHeaderFile
 
 FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
-	: Settings(InSettings)
+	: Settings(InSettings), BufferCount(GetBufferingModeCount(Settings.BufferingMode))
 {
+	SB_LOG_INFO("Renderer Buffering Mode: {}", GetBufferingModeName(Settings.BufferingMode));
 	if (Settings.bEnableDebugLayer)
 	{
 		const HRESULT EnableDebugLayerResult = D3D12GetDebugInterface(IID_PPV_ARGS(&DebugController));
@@ -78,7 +79,6 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	const HRESULT CommandQueueCreateResult = Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&CommandQueue));
 	SB_D3D_ASSERT(CommandQueueCreateResult, "Failed to create command queue");
 
-	uint32_t BufferCount = static_cast<uint32_t>(Settings.BufferingMode);
 	CommandAllocators.resize(BufferCount);
 	CommandLists.resize(BufferCount);
 	Fences.resize(BufferCount);
@@ -128,7 +128,7 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	FSwapChainDesc SwapChainDesc;
 	SwapChainDesc.Width = Settings.Window->GetState().Width;
 	SwapChainDesc.Height = Settings.Window->GetState().Height;
-	SwapChainDesc.BufferCount = static_cast<uint32_t>(Settings.BufferingMode);
+	SwapChainDesc.BufferCount = BufferCount;
 	SwapChainDesc.Format = Settings.Format;
 	SwapChainDesc.Window = Settings.Window;
 	SwapChain = std::make_shared<FSwapChain>(this, SwapChainDesc);
@@ -226,7 +226,7 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	ImGui::StyleColorsDark();
 
 	ImGui_ImplWin32_Init(Settings.Window->GetHandle());
-	ImGui_ImplDX12_Init(Device, static_cast<uint32_t>(Settings.BufferingMode),
+	ImGui_ImplDX12_Init(Device, BufferCount,
 	                    Settings.Format, SrvDescriptorHeap,
 	                    SrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
 	                    SrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
@@ -234,7 +234,7 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 
 FGraphicsDevice::~FGraphicsDevice()
 {
-	Flush(static_cast<uint32_t>(Settings.BufferingMode));
+	Flush(BufferCount);
 
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();
@@ -291,7 +291,7 @@ void FGraphicsDevice::Flush(const uint32_t Count)
 
 void FGraphicsDevice::Resize(const uint32_t InWidth, const uint32_t InHeight)
 {
-	Flush(static_cast<uint32_t>(Settings.BufferingMode));
+	Flush(BufferCount);
 	SwapChain->Resize(InWidth, InHeight);
 	SetViewportAndScissor(InWidth, InHeight);
 	ImGuiIO& io = ImGui::GetIO();
@@ -345,9 +345,11 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 
 	ImGui::Begin("Snowbite");
 	{
-		ImGui::Text(std::format("Snowbite v{}.{}.{}-{}", SNOWBITE_VERSION_MAJOR, SNOWBITE_VERSION_MINOR,
-		                        SNOWBITE_VERSION_PATCH, SNOWBITE_VERSION_BRANCH).c_str());
 		ImGui::Text(std::format("FPS: {}", ImGui::GetIO().Framerate).c_str());
+		ImGui::Text(std::format("Frame time: {} ms", 1000.0f / ImGui::GetIO().Framerate).c_str());
+		ImGui::Text(std::format("Buffering mode: {}", GetBufferingModeName(Settings.BufferingMode)).c_str());
+		ImGui::Text(std::format("Window size: {}x{}", Settings.Window->GetState().Width,
+		                        Settings.Window->GetState().Height).c_str());
 	}
 	ImGui::End();
 
