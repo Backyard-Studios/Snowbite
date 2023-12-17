@@ -83,8 +83,7 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 
 	CommandAllocators.resize(BufferCount);
 	CommandLists.resize(BufferCount);
-	Fences.resize(BufferCount);
-	FenceValues.resize(BufferCount);
+	Fences.reserve(BufferCount);
 	ConstantBufferDescriptorHeaps.resize(BufferCount);
 	ConstantBufferUploadHeaps.resize(BufferCount);
 	ConstantBufferUploadHeapPointers.resize(BufferCount);
@@ -102,10 +101,7 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 		CommandLists[Index]->Close();
 		CommandLists[Index]->SetName((L"Command List Frame " + std::to_wstring(Index)).c_str());
 
-		const HRESULT FenceCreateResult = Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&Fences[Index]));
-		SB_D3D_ASSERT(FenceCreateResult, "Failed to create fence");
-		Fences[Index]->SetName((L"Fence Frame " + std::to_wstring(Index)).c_str());
-		FenceValues[Index] = 0;
+		Fences.push_back(std::make_shared<FFence>(Device));
 
 		D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc;
 		DescriptorHeapDesc.NumDescriptors = 1;
@@ -144,8 +140,6 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 		SB_D3D_ASSERT(MapResult, "Failed to map constant buffer upload heap");
 		memcpy(ConstantBufferUploadHeapPointers[Index], &ConstantBuffer, sizeof(FConstantBuffer));
 	}
-	FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	SB_ASSERT_CRITICAL(FenceEvent != nullptr, E_FAIL, "Failed to create fence event");
 
 	D3D12_DESCRIPTOR_HEAP_DESC RtvDescriptorHeapDesc;
 	RtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -332,10 +326,6 @@ FGraphicsDevice::~FGraphicsDevice()
 	SB_SAFE_RESET(VertexBuffer);
 	PipelineState.Release();
 	RootSignature.Release();
-	if (FenceEvent)
-		CloseHandle(FenceEvent);
-	for (const void* ConstantBufferUploadHeapPointer : ConstantBufferUploadHeapPointers)
-		ConstantBufferUploadHeapPointer = nullptr;
 	ConstantBufferUploadHeapPointers.clear();
 	for (ComPointer<ID3D12Resource2>& ConstantBufferUploadHeap : ConstantBufferUploadHeaps)
 		ConstantBufferUploadHeap.Release();
@@ -343,9 +333,9 @@ FGraphicsDevice::~FGraphicsDevice()
 	for (ComPointer<ID3D12DescriptorHeap>& ConstantBufferDescriptorHeap : ConstantBufferDescriptorHeaps)
 		ConstantBufferDescriptorHeap.Release();
 	ConstantBufferDescriptorHeaps.clear();
-	FenceValues.clear();
-	for (ComPointer<ID3D12Fence1>& Fence : Fences)
-		Fence.Release();
+
+	for (std::shared_ptr<FFence>& TestFence : Fences)
+		TestFence.reset();
 	Fences.clear();
 	for (ComPointer<ID3D12GraphicsCommandList7>& CommandList : CommandLists)
 		CommandList.Release();
@@ -353,7 +343,7 @@ FGraphicsDevice::~FGraphicsDevice()
 	for (ComPointer<ID3D12CommandAllocator>& CommandAllocator : CommandAllocators)
 		CommandAllocator.Release();
 	CommandAllocators.clear();
-	DepthStencilBuffer.Release();
+	ReleaseDepthStencilBuffer();
 	SB_SAFE_RESET(SwapChain);
 	DepthStencilBuffer.Release();
 	DsDescriptorHeap.Release();
@@ -372,18 +362,13 @@ FGraphicsDevice::~FGraphicsDevice()
 	}
 }
 
-void FGraphicsDevice::SignalAndWait()
+void FGraphicsDevice::SignalAndWait() const
 {
-	ComPointer<ID3D12Fence1> Fence = Fences[SwapChain->GetFrameIndex()];
-	FenceValues[SwapChain->GetFrameIndex()]++;
-	CommandQueue->Signal(Fence, FenceValues[SwapChain->GetFrameIndex()]);
-	const HRESULT WaitResult = Fence->SetEventOnCompletion(FenceValues[SwapChain->GetFrameIndex()], FenceEvent);
-	const DWORD WaitForSingleObjectResult = WaitForSingleObject(FenceEvent, 20000);
-	SB_ASSERT_CRITICAL(WaitForSingleObjectResult == WAIT_OBJECT_0, E_FAIL, "Failed to wait for fence");
-	SB_D3D_ASSERT(WaitResult, "Failed to set event on completion");
+	Fences[SwapChain->GetFrameIndex()]->Signal(CommandQueue);
+	Fences[SwapChain->GetFrameIndex()]->WaitOnCPU(Fences[SwapChain->GetFrameIndex()]->GetFenceValue());
 }
 
-void FGraphicsDevice::Flush(const uint32_t Count)
+void FGraphicsDevice::Flush(const uint32_t Count) const
 {
 	for (uint32_t Index = 0; Index < Count; ++Index)
 		SignalAndWait();
@@ -391,12 +376,16 @@ void FGraphicsDevice::Flush(const uint32_t Count)
 
 void FGraphicsDevice::Resize(const uint32_t InWidth, const uint32_t InHeight)
 {
+	bIsResizing = true;
 	Flush(BufferCount);
 	SwapChain->Resize(InWidth, InHeight);
+	ReleaseDepthStencilBuffer();
+	CreateDepthStencilBuffer(InWidth, InHeight);
 	SetViewportAndScissor(InWidth, InHeight);
 	ImGuiIO& io = ImGui::GetIO();
-	io.DisplaySize = ImVec2(static_cast<float>(Settings.Window->GetState().Width),
-	                        static_cast<float>(Settings.Window->GetState().Height));
+	io.DisplaySize = ImVec2(static_cast<float>(InWidth),
+	                        static_cast<float>(InHeight));
+	bIsResizing = false;
 }
 
 std::shared_ptr<FVertexBuffer> FGraphicsDevice::CreateVertexBuffer(FVertex* Vertices, uint32_t Count)
@@ -411,6 +400,8 @@ std::shared_ptr<FIndexBuffer> FGraphicsDevice::CreateIndexBuffer(FIndex* Indices
 
 void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 {
+	if (bIsResizing)
+		return;
 	const uint32_t FrameIndex = SwapChain->GetFrameIndex();
 	ComPointer<ID3D12CommandAllocator> CommandAllocator = CommandAllocators[FrameIndex];
 	const HRESULT ResetCommandAllocatorResult = CommandAllocator->Reset();
@@ -477,6 +468,8 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 
 void FGraphicsDevice::EndFrame()
 {
+	if (bIsResizing)
+		return;
 	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists[SwapChain->GetFrameIndex()];
 
 	ImGui::Render();
@@ -583,4 +576,9 @@ void FGraphicsDevice::CreateDepthStencilBuffer(const uint32_t Width, const uint3
 	DepthStencilViewDesc.Texture2D.MipSlice = 0;
 	Device->CreateDepthStencilView(DepthStencilBuffer.Get(), &DepthStencilViewDesc,
 	                               DsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+}
+
+void FGraphicsDevice::ReleaseDepthStencilBuffer()
+{
+	DepthStencilBuffer.Release();
 }

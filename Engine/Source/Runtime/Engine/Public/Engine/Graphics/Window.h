@@ -86,6 +86,9 @@ private:
 	FWindowState State;
 	HWND WindowHandle;
 
+	uint32_t WindowStyle;
+	RECT WindowRect;
+
 	FOnResizeCallback OnResizeCallback;
 	FOnClientResizeCallback OnClientResizeCallback;
 	FOnFocusCallback OnFocusCallback;

@@ -54,6 +54,9 @@ void FEngine::Run()
 			if (MainWindow->IsClosed())
 				RequestShutdown();
 
+			if (GetAsyncKeyState(VK_F11) & 1)
+				MainWindow->SetFullscreen(!MainWindow->IsFullscreen());
+
 			Renderer->BeginFrame();
 			{
 			}

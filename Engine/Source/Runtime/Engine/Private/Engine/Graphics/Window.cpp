@@ -12,7 +12,7 @@ FWindow::FWindow(const FWindowDesc& InDesc)
 	{
 		WindowClass.cbSize = sizeof(WNDCLASSEX);
 		WindowClass.lpszClassName = "SnowbiteMainWindowClass";
-		WindowClass.style = CS_OWNDC;
+		WindowClass.style = CS_VREDRAW | CS_HREDRAW | CS_DBLCLKS;
 		WindowClass.lpfnWndProc = WindowProc;
 		WindowClass.cbClsExtra = 0;
 		WindowClass.cbWndExtra = 0;
@@ -24,8 +24,9 @@ FWindow::FWindow(const FWindowDesc& InDesc)
 		WindowClass.hIconSm = nullptr;
 		RegisterClassEx(&WindowClass);
 	}
-	WindowHandle = CreateWindowEx(WS_EX_OVERLAPPEDWINDOW | WS_EX_APPWINDOW, WindowClass.lpszClassName, InDesc.Title,
-	                              WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, InDesc.Width,
+	WindowStyle = WS_OVERLAPPEDWINDOW;
+	WindowHandle = CreateWindowEx(0, WindowClass.lpszClassName, InDesc.Title,
+	                              WindowStyle | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, InDesc.Width,
 	                              InDesc.Height,
 	                              nullptr,
 	                              nullptr, WindowClass.hInstance, this);
@@ -95,6 +96,36 @@ void FWindow::SetPosition(const uint32_t X, const uint32_t Y) const
 
 void FWindow::SetFullscreen(const bool bIsFullscreen)
 {
+	if (!bIsFullscreen)
+	{
+		SetWindowLong(WindowHandle, GWL_STYLE, WindowStyle);
+		SetWindowPos(WindowHandle, HWND_NOTOPMOST,
+		             WindowRect.left, WindowRect.top,
+		             WindowRect.right - WindowRect.left,
+		             WindowRect.bottom - WindowRect.top,
+		             SWP_FRAMECHANGED | SWP_NOACTIVATE);
+		ShowWindow(WindowHandle, SW_NORMAL);
+	}
+	else
+	{
+		GetWindowRect(WindowHandle, &WindowRect);
+		SetWindowLong(WindowHandle, GWL_STYLE,
+		              WindowStyle & ~(WS_CAPTION | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_THICKFRAME));
+		DEVMODE DeviceMode = {};
+		DeviceMode.dmSize = sizeof(DEVMODE);
+		EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &DeviceMode);
+		const RECT FullscreenRect = {
+			DeviceMode.dmPosition.x, DeviceMode.dmPosition.y,
+			DeviceMode.dmPosition.x + static_cast<LONG>(DeviceMode.dmPelsWidth),
+			DeviceMode.dmPosition.y + static_cast<LONG>(DeviceMode.dmPelsHeight)
+		};
+		SetWindowPos(WindowHandle, HWND_TOPMOST,
+		             FullscreenRect.left, FullscreenRect.top,
+		             FullscreenRect.right - FullscreenRect.left,
+		             FullscreenRect.bottom - FullscreenRect.top,
+		             SWP_FRAMECHANGED | SWP_NOACTIVATE);
+		ShowWindow(WindowHandle, SW_MAXIMIZE);
+	}
 	State.bIsFullscreen = bIsFullscreen;
 	if (OnFullscreenCallback)
 		OnFullscreenCallback(bIsFullscreen);

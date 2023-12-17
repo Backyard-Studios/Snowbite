@@ -6,6 +6,7 @@
 
 #include "BufferingMode.h"
 #include "ClearColor.h"
+#include "Fence.h"
 #include "IndexBuffer.h"
 #include "SwapChain.h"
 #include "VertexBuffer.h"
@@ -37,8 +38,8 @@ public:
 	FGraphicsDevice(const FGraphicsDeviceSettings& InSettings);
 	~FGraphicsDevice();
 
-	void SignalAndWait();
-	void Flush(uint32_t Count = 1);
+	void SignalAndWait() const;
+	void Flush(uint32_t Count = 1) const;
 	void ExecuteCommandList(ComPointer<ID3D12GraphicsCommandList7> CommandList);
 
 	void Resize(uint32_t InWidth, uint32_t InHeight);
@@ -63,10 +64,13 @@ private:
 	void SetViewportAndScissor(uint32_t Width, uint32_t Height);
 
 	void CreateDepthStencilBuffer(uint32_t Width, uint32_t Height);
+	void ReleaseDepthStencilBuffer();
 
 private:
 	FGraphicsDeviceSettings Settings;
 	uint32_t BufferCount;
+
+	bool bIsResizing = false;
 
 	ComPointer<IDXGIFactory7> Factory;
 
@@ -78,9 +82,7 @@ private:
 
 	std::vector<ComPointer<ID3D12CommandAllocator>> CommandAllocators;
 	std::vector<ComPointer<ID3D12GraphicsCommandList7>> CommandLists;
-	std::vector<ComPointer<ID3D12Fence1>> Fences;
-	std::vector<uint64_t> FenceValues;
-	HANDLE FenceEvent = nullptr;
+	std::vector<std::shared_ptr<FFence>> Fences;
 
 	ComPointer<ID3D12DescriptorHeap> RtvDescriptorHeap;
 	uint32_t RtvDescriptorSize = 0;
