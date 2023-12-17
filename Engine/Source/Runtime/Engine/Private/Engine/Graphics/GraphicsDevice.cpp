@@ -429,8 +429,6 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 	CommandList->ClearDepthStencilView(DsDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH,
 	                                   1.0f, 0, 0, nullptr);
 
-
-	ConstantBuffer.Offset = 0.5f;
 	memcpy(ConstantBufferUploadHeapPointers[FrameIndex], &ConstantBuffer, sizeof(FConstantBuffer));
 
 	ID3D12DescriptorHeap* DescriptorHeaps[] = {
@@ -461,6 +459,10 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+
+	ImGui::Begin("Debug");
+	ImGui::SliderFloat("Offset", &ConstantBuffer.Offset, -1.0f, 1.0f);
+	ImGui::End();
 }
 
 void FGraphicsDevice::EndFrame()
