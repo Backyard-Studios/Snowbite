@@ -85,6 +85,9 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 	CommandLists.resize(BufferCount);
 	Fences.resize(BufferCount);
 	FenceValues.resize(BufferCount);
+	ConstantBufferDescriptorHeaps.resize(BufferCount);
+	ConstantBufferUploadHeaps.resize(BufferCount);
+	ConstantBufferUploadHeapPointers.resize(BufferCount);
 	for (uint32_t Index = 0; Index < BufferCount; ++Index)
 	{
 		const HRESULT CommandAllocatorCreateResult = Device->CreateCommandAllocator(
@@ -103,6 +106,43 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 		SB_D3D_ASSERT(FenceCreateResult, "Failed to create fence");
 		Fences[Index]->SetName((L"Fence Frame " + std::to_wstring(Index)).c_str());
 		FenceValues[Index] = 0;
+
+		D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc;
+		DescriptorHeapDesc.NumDescriptors = 1;
+		DescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		DescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		DescriptorHeapDesc.NodeMask = 0;
+		HRESULT CreateDescriptorHeapResult = Device->CreateDescriptorHeap(
+			&DescriptorHeapDesc, IID_PPV_ARGS(&ConstantBufferDescriptorHeaps[Index]));
+		SB_D3D_ASSERT(CreateDescriptorHeapResult, "Failed to create descriptor heap");
+
+		CD3DX12_HEAP_PROPERTIES UploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+		CD3DX12_RESOURCE_DESC ConstantBufferResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(
+			static_cast<uint64_t>(1024) * 64);
+		HRESULT CreateResourceResult = Device->CreateCommittedResource(
+			&UploadHeapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&ConstantBufferResourceDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&ConstantBufferUploadHeaps[Index]));
+		SB_D3D_ASSERT(CreateResourceResult, "Failed to create constant buffer upload heap");
+
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = ConstantBufferUploadHeaps[Index]->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = sizeof(FConstantBuffer) + 255 & ~255;
+		Device->CreateConstantBufferView(
+			&cbvDesc, ConstantBufferDescriptorHeaps[Index]->GetCPUDescriptorHandleForHeapStart());
+
+		ZeroMemory(&ConstantBuffer, sizeof(FConstantBuffer));
+
+		CD3DX12_RANGE ReadRange(0, 0);
+		HRESULT MapResult = ConstantBufferUploadHeaps[Index]->Map(0, &ReadRange,
+		                                                          reinterpret_cast<void**>(&
+			                                                          ConstantBufferUploadHeapPointers[
+				                                                          Index]));
+		SB_D3D_ASSERT(MapResult, "Failed to map constant buffer upload heap");
+		memcpy(ConstantBufferUploadHeapPointers[Index], &ConstantBuffer, sizeof(FConstantBuffer));
 	}
 	FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 	SB_ASSERT_CRITICAL(FenceEvent != nullptr, E_FAIL, "Failed to create fence event");
@@ -149,8 +189,29 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 
 	// TODO: Temporary until we have a proper asset pipeline
 	{
+		D3D12_DESCRIPTOR_RANGE DescriptorRanges[1];
+		DescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+		DescriptorRanges[0].NumDescriptors = 1;
+		DescriptorRanges[0].BaseShaderRegister = 0;
+		DescriptorRanges[0].RegisterSpace = 0;
+		DescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+		D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable;
+		DescriptorTable.NumDescriptorRanges = _countof(DescriptorRanges);
+		DescriptorTable.pDescriptorRanges = &DescriptorRanges[0];
+
+		D3D12_ROOT_PARAMETER RootParameters[1];
+		RootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		RootParameters[0].DescriptorTable = DescriptorTable;
+		RootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
 		CD3DX12_ROOT_SIGNATURE_DESC RootSignatureDesc;
-		RootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		RootSignatureDesc.Init(_countof(RootParameters), RootParameters, 0, nullptr,
+		                       D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+		                       D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+		                       D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+		                       D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+		                       D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS);
 
 		ComPointer<ID3DBlob> RootSignatureBlob;
 		HRESULT RootSignatureSerializeResult = D3D12SerializeRootSignature(
@@ -340,11 +401,12 @@ std::shared_ptr<FIndexBuffer> FGraphicsDevice::CreateIndexBuffer(FIndex* Indices
 
 void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 {
-	ComPointer<ID3D12CommandAllocator> CommandAllocator = CommandAllocators[SwapChain->GetFrameIndex()];
+	const uint32_t FrameIndex = SwapChain->GetFrameIndex();
+	ComPointer<ID3D12CommandAllocator> CommandAllocator = CommandAllocators[FrameIndex];
 	const HRESULT ResetCommandAllocatorResult = CommandAllocator->Reset();
 	SB_D3D_ASSERT(ResetCommandAllocatorResult, "Failed to reset command allocator");
 
-	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists[SwapChain->GetFrameIndex()];
+	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists[FrameIndex];
 	const HRESULT ResetCommandListResult = CommandList->Reset(CommandAllocator.Get(), nullptr);
 	SB_D3D_ASSERT(ResetCommandListResult, "Failed to reset command list");
 
@@ -367,23 +429,38 @@ void FGraphicsDevice::BeginFrame(const FClearColor& ClearColor)
 	CommandList->ClearDepthStencilView(DsDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH,
 	                                   1.0f, 0, 0, nullptr);
 
-	CommandList->SetDescriptorHeaps(1, &SrvDescriptorHeap);
+
+	ConstantBuffer.Offset = 0.5f;
+	memcpy(ConstantBufferUploadHeapPointers[FrameIndex], &ConstantBuffer, sizeof(FConstantBuffer));
+
+	ID3D12DescriptorHeap* DescriptorHeaps[] = {
+		ConstantBufferDescriptorHeaps[FrameIndex].Get(),
+	};
+	CommandList->SetDescriptorHeaps(_countof(DescriptorHeaps), DescriptorHeaps);
+
+	CommandList->SetGraphicsRootSignature(RootSignature.Get());
+	CommandList->SetPipelineState(PipelineState.Get());
+	CommandList->SetGraphicsRootDescriptorTable(
+		0, ConstantBufferDescriptorHeaps[FrameIndex]->GetGPUDescriptorHandleForHeapStart());
 
 	CommandList->RSSetViewports(1, &Viewport);
 	CommandList->RSSetScissorRects(1, &ScissorRect);
 	CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	ImGui_ImplDX12_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-
 	FDrawCall DrawCall;
-	DrawCall.RootSignature = RootSignature;
-	DrawCall.PipelineState = PipelineState;
 	DrawCall.VertexBuffer = VertexBuffer;
 	DrawCall.IndexBuffer = IndexBuffer;
 	Draw(DrawCall);
 	CommandList->DrawIndexedInstanced(6, 1, 0, 4, 0);
+
+	ID3D12DescriptorHeap* SrvDescriptorHeaps[] = {
+		SrvDescriptorHeap.Get(),
+	};
+	CommandList->SetDescriptorHeaps(_countof(SrvDescriptorHeaps), SrvDescriptorHeaps);
+
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
 }
 
 void FGraphicsDevice::EndFrame()
@@ -409,11 +486,9 @@ void FGraphicsDevice::EndFrame()
 	SwapChain->Present(true);
 }
 
-void FGraphicsDevice::Draw(FDrawCall& DrawCall) const
+void FGraphicsDevice::Draw(const FDrawCall& DrawCall) const
 {
 	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandLists[SwapChain->GetFrameIndex()];
-	CommandList->SetGraphicsRootSignature(DrawCall.RootSignature.Get());
-	CommandList->SetPipelineState(DrawCall.PipelineState.Get());
 	const D3D12_VERTEX_BUFFER_VIEW VertexBufferView = DrawCall.VertexBuffer->GetView();
 	CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
 	const D3D12_INDEX_BUFFER_VIEW IndexBufferView = DrawCall.IndexBuffer->GetView();

@@ -24,8 +24,11 @@ struct SNOWBITE_API FDrawCall
 {
 	std::shared_ptr<FVertexBuffer> VertexBuffer;
 	std::shared_ptr<FIndexBuffer> IndexBuffer;
-	ComPointer<ID3D12RootSignature> RootSignature;
-	ComPointer<ID3D12PipelineState> PipelineState;
+};
+
+struct SNOWBITE_API FConstantBuffer
+{
+	float Offset = 0.5f;
 };
 
 class SNOWBITE_API FGraphicsDevice
@@ -46,7 +49,7 @@ public:
 	void BeginFrame(const FClearColor& ClearColor);
 	void EndFrame();
 
-	void Draw(FDrawCall& DrawCall) const;
+	void Draw(const FDrawCall& DrawCall) const;
 
 	[[nodiscard]] ComPointer<IDXGIFactory7> GetFactory() const { return Factory; }
 	[[nodiscard]] ComPointer<ID3D12Device10> GetDevice() const { return Device; }
@@ -87,6 +90,12 @@ private:
 
 	ComPointer<ID3D12DescriptorHeap> DsDescriptorHeap;
 	uint32_t DsDescriptorSize = 0;
+
+	FConstantBuffer ConstantBuffer = {};
+
+	std::vector<ComPointer<ID3D12DescriptorHeap>> ConstantBufferDescriptorHeaps;
+	std::vector<ComPointer<ID3D12Resource2>> ConstantBufferUploadHeaps;
+	std::vector<uint8_t*> ConstantBufferUploadHeapPointers;
 
 	ComPointer<ID3D12Resource2> DepthStencilBuffer;
 
