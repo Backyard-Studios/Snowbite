@@ -172,6 +172,11 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 
 	CreateDepthStencilBuffer(Settings.Window->GetState().Width, Settings.Window->GetState().Height);
 
+	UploadCommandList = std::make_shared<FCommandList>(Device, D3D12_COMMAND_LIST_TYPE_DIRECT, true,
+	                                                   "Upload Command List");
+	UploadFence = std::make_shared<FFence>(Device);
+	UploadCommandList->Reset();
+
 	// TODO: Temporary until we have a proper asset pipeline
 	{
 		D3D12_DESCRIPTOR_RANGE DescriptorRanges[1];
@@ -256,9 +261,6 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 		PipelineState->SetName(L"Default pipeline state");
 		RootSignature->SetName(L"Default root signature");
 
-		std::shared_ptr<FCommandList> CommandList = CommandLists.at(0);
-		CommandList->Reset();
-
 		FVertex Vertices[] = {
 			// first quad (closer to camera, blue)
 			{-0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f},
@@ -273,16 +275,16 @@ FGraphicsDevice::FGraphicsDevice(const FGraphicsDeviceSettings& InSettings)
 			{0.0f, 0.75f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f}
 		};
 		VertexBuffer = std::make_unique<FVertexBuffer>(this, Vertices, _countof(Vertices));
-		VertexBuffer->Upload(CommandList->GetNativeList());
+		VertexBuffer->Upload(UploadCommandList->GetNativeList());
 
-		CommandList->Reset();
+		UploadCommandList->Reset();
 
 		FIndex Indices[] = {
 			0, 1, 2,
 			0, 3, 1,
 		};
 		IndexBuffer = std::make_unique<FIndexBuffer>(this, Indices, _countof(Indices));
-		IndexBuffer->Upload(CommandList->GetNativeList());
+		IndexBuffer->Upload(UploadCommandList->GetNativeList());
 	}
 
 	SetViewportAndScissor(Settings.Window->GetState().Width, Settings.Window->GetState().Height);
@@ -325,6 +327,8 @@ FGraphicsDevice::~FGraphicsDevice()
 		ConstantBufferDescriptorHeap.Release();
 	ConstantBufferDescriptorHeaps.clear();
 
+	UploadCommandList.reset();
+	UploadFence.reset();
 	for (std::shared_ptr<FFence>& TestFence : Fences)
 		TestFence.reset();
 	Fences.clear();

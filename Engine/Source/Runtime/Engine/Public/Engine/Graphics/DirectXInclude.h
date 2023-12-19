@@ -8,3 +8,7 @@
 #include <wrl.h>
 #include <Engine/Graphics/ComPointer.h>
 #include <Engine/Graphics/DirectX12Helpers.h>
+
+#include <Engine/Core/Assert.h>
+
+#define SB_D3D_ASSERT(Result, Message) SB_ASSERT_CRITICAL(SUCCEEDED(Result), Result, Message);

@@ -86,6 +86,9 @@ private:
 	std::vector<std::shared_ptr<FCommandList>> CommandLists;
 	std::vector<std::shared_ptr<FFence>> Fences;
 
+	std::shared_ptr<FCommandList> UploadCommandList;
+	std::shared_ptr<FFence> UploadFence;
+
 	ComPointer<ID3D12DescriptorHeap> RtvDescriptorHeap;
 	uint32_t RtvDescriptorSize = 0;
 
