@@ -83,7 +83,8 @@ HRESULT FD3D12SwapChain::Resize(const uint32_t InWidth, const uint32_t InHeight)
 
 HRESULT FD3D12SwapChain::Present(const bool bShouldVSync)
 {
-	const HRESULT PresentResult = SwapChain->Present(bShouldVSync ? 1 : 0, 0);
+	const HRESULT PresentResult = SwapChain->Present(bShouldVSync ? 1 : 0,
+	                                                 bShouldVSync ? 0 : DXGI_PRESENT_ALLOW_TEARING);
 	SB_D3D_FAILED_RETURN(PresentResult);
 	return S_OK;
 }

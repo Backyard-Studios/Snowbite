@@ -21,16 +21,25 @@ public:
 	~FRenderer();
 
 	void Resize(uint32_t InWidth, uint32_t InHeight) const;
+
 	void SetClearColor(FClearColor InClearColor);
+	void SetVSync(bool bInIsVSyncEnabled);
 
 	HRESULT BeginFrame() const;
 	HRESULT EndFrame() const;
 
+	void BeginUIFrame() const;
+	void EndUIFrame() const;
+
 	ERHIType GetRHIType() const { return Settings.RHIType; }
 	const char* GetRHIName() const { return RHI->GetName(); }
 
+	[[nodiscard]] bool IsVSyncEnabled() const { return bIsVSyncEnabled; }
+
 private:
 	FRendererSettings Settings;
+
 	std::shared_ptr<IStaticRHI> RHI;
 	FClearColor ClearColor;
+	bool bIsVSyncEnabled = false;
 };

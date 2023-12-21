@@ -19,7 +19,7 @@ FWindow::FWindow(const FWindowDesc& InDesc)
 		WindowClass.hInstance = GetModuleHandle(nullptr);
 		WindowClass.hIcon = nullptr;
 		WindowClass.hCursor = nullptr;
-		WindowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
+		WindowClass.hbrBackground = nullptr;
 		WindowClass.lpszMenuName = nullptr;
 		WindowClass.hIconSm = nullptr;
 		RegisterClassEx(&WindowClass);
@@ -170,7 +170,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 LRESULT FWindow::WindowProc(const HWND WindowHandle, const UINT Message, const WPARAM WParam, const LPARAM LParam)
 {
 	if (ImGui_ImplWin32_WndProcHandler(WindowHandle, Message, WParam, LParam))
-		return true;
+		return DefWindowProc(WindowHandle, Message, WParam, LParam);
 
 	FWindow* Window = reinterpret_cast<FWindow*>(GetWindowLongPtr(WindowHandle, GWLP_USERDATA));
 	switch (Message)

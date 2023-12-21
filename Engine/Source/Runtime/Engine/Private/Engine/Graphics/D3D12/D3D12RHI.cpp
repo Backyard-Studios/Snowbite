@@ -2,6 +2,8 @@
 
 #include <Engine/Graphics/D3D12/D3D12RHI.h>
 
+#include "backends/imgui_impl_dx12.h"
+#include "backends/imgui_impl_win32.h"
 #include "Engine/Graphics/D3D12/D3D12Utils.h"
 
 FD3D12RHI::FD3D12RHI(const FD3D12RHISettings& InSettings)
@@ -65,18 +67,43 @@ HRESULT FD3D12RHI::Initialize()
 		&DSVDescriptorHeapDesc, IID_PPV_ARGS(&DSVDescriptorHeap));
 	SB_D3D_FAILED_RETURN(DSVDescriptorHeapCreateResult);
 
+	D3D12_DESCRIPTOR_HEAP_DESC SRVDescriptorHeapDesc = {};
+	SRVDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	SRVDescriptorHeapDesc.NumDescriptors = 1;
+	SRVDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	const HRESULT SRVDescriptorHeapCreateResult = Device->GetNativeDevice()->CreateDescriptorHeap(
+		&SRVDescriptorHeapDesc, IID_PPV_ARGS(&SRVDescriptorHeap));
+	SB_D3D_ASSERT_RETURN(SRVDescriptorHeapCreateResult, "Unable to create SRV descriptor heap");
+
 	const HRESULT CreateDepthStencilResult = CreateDepthStencil();
 	SB_D3D_ASSERT_RETURN(CreateDepthStencilResult, "Unable to create depth stencil");
 
 	Settings.Window->SetTitle(std::format("Snowbite | {} ({})", GetName(),
 	                                      D3D12Utils::ShaderModelToMajorString(Device->GetShaderModel())).c_str());
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& IO = ImGui::GetIO();
+	IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	IO.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+	IO.DisplaySize = ImVec2(static_cast<float>(Width), static_cast<float>(Height));
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplWin32_Init(Settings.Window->GetHandle());
+	ImGui_ImplDX12_Init(Device->GetNativeDevice(), BufferCount, Device->GetRenderTargetViewFormat(), SRVDescriptorHeap,
+	                    SRVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+	                    SRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 	return S_OK;
 }
 
 void FD3D12RHI::Shutdown()
 {
 	FlushFrames(BufferCount);
+	ImGui_ImplDX12_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
 	DestroyDepthStencil();
+	SRVDescriptorHeap.Release();
 	DSVDescriptorHeap.Release();
 	DestroyFrameContexts();
 	SwapChain->Destroy();
@@ -127,7 +154,7 @@ HRESULT FD3D12RHI::PrepareNextFrame()
 	return S_OK;
 }
 
-HRESULT FD3D12RHI::PresentFrame()
+HRESULT FD3D12RHI::PresentFrame(const bool bShouldVSync)
 {
 	const FFrameContext FrameContext = FrameContexts[BufferIndex];
 	const std::shared_ptr<FD3D12CommandList> CommandListContainer = FrameContext.CommandList;
@@ -145,7 +172,7 @@ HRESULT FD3D12RHI::PresentFrame()
 	const std::shared_ptr<FD3D12Fence> Fence = FrameContext.Fence;
 	const HRESULT ExecuteResult = CommandListContainer->Execute(GraphicsCommandQueue, Fence);
 	SB_D3D_FAILED_RETURN(ExecuteResult);
-	const HRESULT PresentResult = SwapChain->Present(true);
+	const HRESULT PresentResult = SwapChain->Present(bShouldVSync);
 	SB_D3D_FAILED_RETURN(PresentResult);
 	return S_OK;
 }
@@ -174,6 +201,24 @@ HRESULT FD3D12RHI::FlushFrames(uint32_t Count)
 	return S_OK;
 }
 
+void FD3D12RHI::BeginUIFrame()
+{
+	ID3D12DescriptorHeap* SrvDescriptorHeaps[] = {
+		SRVDescriptorHeap.Get(),
+	};
+	FrameContexts[BufferIndex].CommandList->GetNativeList()->SetDescriptorHeaps(
+		_countof(SrvDescriptorHeaps), SrvDescriptorHeaps);
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+}
+
+void FD3D12RHI::EndUIFrame()
+{
+	ImGui::Render();
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), FrameContexts[BufferIndex].CommandList->GetNativeList());
+}
+
 HRESULT FD3D12RHI::Resize(const uint32_t InWidth, const uint32_t InHeight)
 {
 	FlushFrames(BufferCount);
@@ -184,6 +229,8 @@ HRESULT FD3D12RHI::Resize(const uint32_t InWidth, const uint32_t InHeight)
 	DestroyDepthStencil();
 	const HRESULT CreateDepthStencilResult = CreateDepthStencil();
 	SB_D3D_FAILED_RETURN(CreateDepthStencilResult);
+	ImGuiIO& io = ImGui::GetIO();
+	io.DisplaySize = ImVec2(static_cast<float>(Width), static_cast<float>(Height));
 	return S_OK;
 }
 

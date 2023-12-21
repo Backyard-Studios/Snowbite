@@ -35,9 +35,12 @@ public:
 	void Shutdown() override;
 
 	HRESULT PrepareNextFrame() override;
-	HRESULT PresentFrame() override;
+	HRESULT PresentFrame(bool bShouldVSync) override;
 	HRESULT WaitForFrame(uint32_t Index) override;
 	HRESULT FlushFrames(uint32_t Count) override;
+
+	void BeginUIFrame() override;
+	void EndUIFrame() override;
 
 	HRESULT Resize(uint32_t InWidth, uint32_t InHeight) override;
 
@@ -80,6 +83,7 @@ private:
 	FClearColor BackBufferClearColor;
 
 	ComPointer<ID3D12DescriptorHeap> DSVDescriptorHeap;
+	ComPointer<ID3D12DescriptorHeap> SRVDescriptorHeap;
 
 	std::shared_ptr<FD3D12DepthStencil> DepthStencil;
 };

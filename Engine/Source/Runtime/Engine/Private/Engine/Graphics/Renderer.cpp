@@ -39,6 +39,11 @@ void FRenderer::SetClearColor(const FClearColor InClearColor)
 	RHI->SetBackBufferClearColor(ClearColor);
 }
 
+void FRenderer::SetVSync(const bool bInIsVSyncEnabled)
+{
+	bIsVSyncEnabled = bInIsVSyncEnabled;
+}
+
 HRESULT FRenderer::BeginFrame() const
 {
 	const HRESULT PrepareResult = RHI->PrepareNextFrame();
@@ -48,7 +53,17 @@ HRESULT FRenderer::BeginFrame() const
 
 HRESULT FRenderer::EndFrame() const
 {
-	const HRESULT PresentResult = RHI->PresentFrame();
+	const HRESULT PresentResult = RHI->PresentFrame(bIsVSyncEnabled);
 	SB_D3D_FAILED_RETURN(PresentResult);
 	return S_OK;
+}
+
+void FRenderer::BeginUIFrame() const
+{
+	RHI->BeginUIFrame();
+}
+
+void FRenderer::EndUIFrame() const
+{
+	RHI->EndUIFrame();
 }

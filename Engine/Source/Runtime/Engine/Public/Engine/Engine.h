@@ -4,6 +4,7 @@
 
 #include <memory>
 
+#include "Application/LayerStack.h"
 #include "Core/ArgumentParser.h"
 #include "Graphics/Renderer.h"
 #include "Graphics/Window.h"
@@ -18,15 +19,22 @@ public:
 	~FEngine() = default;
 	SB_DISABLE_COPY_AND_MOVE(FEngine)
 
+	/**
+	 * @brief Requests the engine to shutdown
+	 * The request will be processed at the end of the current update loop
+	 */
 	void RequestShutdown();
 
 	[[nodiscard]] bool IsShutdownRequested() const { return bIsShutdownRequested; }
 	[[nodiscard]] bool IsHeadless() const { return bIsHeadless; }
 
+	[[nodiscard]] std::shared_ptr<FWindow> GetMainWindow() const { return MainWindow; }
+	[[nodiscard]] std::shared_ptr<FRenderer> GetRenderer() const { return Renderer; }
+
 private:
 	HRESULT Initialize();
 	/**
-	 * Starts the update loop
+	 * @brief Starts the update loop
 	 */
 	void Run();
 	HRESULT Shutdown(HRESULT ExitCode = S_OK);
@@ -38,6 +46,8 @@ private:
 	FArgumentParser ArgumentParser;
 	bool bIsShutdownRequested = false;
 	bool bIsHeadless = false;
+
+	std::unique_ptr<FLayerStack> LayerStack = nullptr;
 
 	std::shared_ptr<FWindow> MainWindow = nullptr;
 	std::shared_ptr<FRenderer> Renderer = nullptr;
