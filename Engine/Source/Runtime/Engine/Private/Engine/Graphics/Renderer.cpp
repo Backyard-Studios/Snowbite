@@ -17,8 +17,8 @@ FRenderer::FRenderer(const FRendererSettings& InSettings)
 	const HRESULT InitializeResult = RHI->Initialize();
 	SB_ASSERT_CRITICAL(SUCCEEDED(InitializeResult), E_RHI_INITIALIZATION_FAILED, "Failed to initialize renderer");
 	RHI->SetBackBufferClearColor(ClearColor);
-	SB_LOG_INFO("Successfully initialized renderer with {}", RHI->GetName());
 	SB_LOG_DEBUG("Using {} mode", GetBufferingModeName(Settings.BufferingMode));
+	SB_LOG_INFO("Successfully initialized renderer with {}", RHI->GetName());
 }
 
 FRenderer::~FRenderer()

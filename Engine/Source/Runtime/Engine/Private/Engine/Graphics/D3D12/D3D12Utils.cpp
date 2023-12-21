@@ -190,3 +190,25 @@ const char* D3D12Utils::DXGIFormatToString(const DXGI_FORMAT Format)
 		return "Unknown";
 	}
 }
+
+D3D12_VIEWPORT D3D12Utils::CreateViewport(const uint32_t Width, const uint32_t Height)
+{
+	D3D12_VIEWPORT Viewport;
+	Viewport.TopLeftX = 0.0f;
+	Viewport.TopLeftY = 0.0f;
+	Viewport.Width = static_cast<float>(Width);
+	Viewport.Height = static_cast<float>(Height);
+	Viewport.MinDepth = 0.0f;
+	Viewport.MaxDepth = 1.0f;
+	return Viewport;
+}
+
+D3D12_RECT D3D12Utils::CreateScissorRect(const uint32_t Width, const uint32_t Height)
+{
+	D3D12_RECT ScissorRect;
+	ScissorRect.left = 0;
+	ScissorRect.top = 0;
+	ScissorRect.right = static_cast<LONG>(Width);
+	ScissorRect.bottom = static_cast<LONG>(Height);
+	return ScissorRect;
+}

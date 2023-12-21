@@ -70,6 +70,9 @@ private:
 	uint32_t Width = 0;
 	uint32_t Height = 0;
 
+	D3D12_VIEWPORT Viewport = {};
+	D3D12_RECT ScissorRect = {};
+
 #pragma region DebugLayer
 	ComPointer<IDXGIDebug1> DXGIDebug;
 #pragma endregion

@@ -18,6 +18,8 @@ HRESULT FD3D12RHI::Initialize()
 {
 	Width = Settings.Window->GetWidth();
 	Height = Settings.Window->GetHeight();
+	Viewport = D3D12Utils::CreateViewport(Width, Height);
+	ScissorRect = D3D12Utils::CreateScissorRect(Width, Height);
 	if (Settings.bEnableDebugLayer)
 	{
 		const HRESULT GetDXGIDebugInterfaceResult = DXGIGetDebugInterface1(0, IID_PPV_ARGS(&DXGIDebug));
@@ -142,6 +144,9 @@ HRESULT FD3D12RHI::PrepareNextFrame()
 	Barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	CommandList->ResourceBarrier(1, &Barrier);
 
+	CommandList->RSSetViewports(1, &Viewport);
+	CommandList->RSSetScissorRects(1, &ScissorRect);
+
 	const D3D12_CPU_DESCRIPTOR_HANDLE BackBufferDescriptor = SwapChain->GetBackBufferDescriptor();
 	const D3D12_CPU_DESCRIPTOR_HANDLE DSVDescriptor = DSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	CommandList->OMSetRenderTargets(1, &BackBufferDescriptor, FALSE, &DSVDescriptor);
@@ -230,6 +235,8 @@ HRESULT FD3D12RHI::Resize(const uint32_t InWidth, const uint32_t InHeight)
 	SB_D3D_FAILED_RETURN(CreateDepthStencilResult);
 	ImGuiIO& io = ImGui::GetIO();
 	io.DisplaySize = ImVec2(static_cast<float>(Width), static_cast<float>(Height));
+	Viewport = D3D12Utils::CreateViewport(Width, Height);
+	ScissorRect = D3D12Utils::CreateScissorRect(Width, Height);
 	return S_OK;
 }
 

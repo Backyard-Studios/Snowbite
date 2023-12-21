@@ -12,6 +12,8 @@ namespace D3D12Utils
 	SNOWBITE_API const char* ShaderModelToString(D3D_SHADER_MODEL ShaderModel);
 	SNOWBITE_API const char* ShaderModelToMajorString(D3D_SHADER_MODEL ShaderModel);
 	SNOWBITE_API const char* DXGIFormatToString(DXGI_FORMAT Format);
+	SNOWBITE_API D3D12_VIEWPORT CreateViewport(uint32_t Width, uint32_t Height);
+	SNOWBITE_API D3D12_RECT CreateScissorRect(uint32_t Width, uint32_t Height);
 }
 
 #define SB_D3D_FAILED_RETURN(Result) \
