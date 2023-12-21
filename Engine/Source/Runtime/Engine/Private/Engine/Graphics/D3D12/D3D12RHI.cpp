@@ -57,6 +57,17 @@ HRESULT FD3D12RHI::Initialize()
 	const HRESULT InitializePerFrameDataResult = InitializeFrameContexts();
 	SB_D3D_ASSERT_RETURN(InitializePerFrameDataResult, "Unable to initialize per frame data");
 
+	D3D12_DESCRIPTOR_HEAP_DESC DSVDescriptorHeapDesc = {};
+	DSVDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	DSVDescriptorHeapDesc.NumDescriptors = 1;
+	DSVDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	const HRESULT DSVDescriptorHeapCreateResult = Device->GetNativeDevice()->CreateDescriptorHeap(
+		&DSVDescriptorHeapDesc, IID_PPV_ARGS(&DSVDescriptorHeap));
+	SB_D3D_FAILED_RETURN(DSVDescriptorHeapCreateResult);
+
+	const HRESULT CreateDepthStencilResult = CreateDepthStencil();
+	SB_D3D_ASSERT_RETURN(CreateDepthStencilResult, "Unable to create depth stencil");
+
 	Settings.Window->SetTitle(std::format("Snowbite | {} ({})", GetName(),
 	                                      D3D12Utils::ShaderModelToMajorString(Device->GetShaderModel())).c_str());
 	return S_OK;
@@ -65,6 +76,8 @@ HRESULT FD3D12RHI::Initialize()
 void FD3D12RHI::Shutdown()
 {
 	FlushFrames(BufferCount);
+	DestroyDepthStencil();
+	DSVDescriptorHeap.Release();
 	DestroyFrameContexts();
 	SwapChain->Destroy();
 	SB_SAFE_RESET(SwapChain);
@@ -104,11 +117,13 @@ HRESULT FD3D12RHI::PrepareNextFrame()
 	CommandList->ResourceBarrier(1, &Barrier);
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE BackBufferDescriptor = SwapChain->GetBackBufferDescriptor();
-	CommandList->OMSetRenderTargets(1, &BackBufferDescriptor, FALSE, nullptr);
+	const D3D12_CPU_DESCRIPTOR_HANDLE DSVDescriptor = DSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	CommandList->OMSetRenderTargets(1, &BackBufferDescriptor, FALSE, &DSVDescriptor);
 	const float ClearColorArray[] = {
 		BackBufferClearColor.Red, BackBufferClearColor.Green, BackBufferClearColor.Blue, BackBufferClearColor.Alpha
 	};
 	CommandList->ClearRenderTargetView(BackBufferDescriptor, ClearColorArray, 0, nullptr);
+	CommandList->ClearDepthStencilView(DSVDescriptor, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 	return S_OK;
 }
 
@@ -166,6 +181,9 @@ HRESULT FD3D12RHI::Resize(const uint32_t InWidth, const uint32_t InHeight)
 	Height = InHeight;
 	const HRESULT ResizeResult = SwapChain->Resize(Width, Height);
 	SB_D3D_FAILED_RETURN(ResizeResult);
+	DestroyDepthStencil();
+	const HRESULT CreateDepthStencilResult = CreateDepthStencil();
+	SB_D3D_FAILED_RETURN(CreateDepthStencilResult);
 	return S_OK;
 }
 
@@ -229,4 +247,19 @@ void FD3D12RHI::DestroyFrameContexts()
 		FrameContext.CommandList.reset();
 	}
 	FrameContexts.clear();
+}
+
+HRESULT FD3D12RHI::CreateDepthStencil()
+{
+	DepthStencil = std::make_shared<FD3D12DepthStencil>(Device->GetNativeDevice(), Device->GetAllocator(),
+	                                                    DSVDescriptorHeap);
+	const HRESULT CreateResult = DepthStencil->Initialize(Device->GetDepthStencilViewFormat(), Width, Height);
+	SB_D3D_FAILED_RETURN(CreateResult);
+	return S_OK;
+}
+
+void FD3D12RHI::DestroyDepthStencil()
+{
+	DepthStencil->Destroy();
+	SB_SAFE_RESET(DepthStencil);
 }

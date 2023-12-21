@@ -3,6 +3,7 @@
 #include <Engine/Core/Definitions.h>
 
 #include "D3D12CommandList.h"
+#include "D3D12DepthStencil.h"
 #include "D3D12Device.h"
 #include "D3D12SwapChain.h"
 #include "Engine/Graphics/BufferingMode.h"
@@ -54,6 +55,9 @@ private:
 	HRESULT InitializeFrameContexts();
 	void DestroyFrameContexts();
 
+	HRESULT CreateDepthStencil();
+	void DestroyDepthStencil();
+
 private:
 	FD3D12RHISettings Settings;
 
@@ -74,4 +78,8 @@ private:
 
 	std::vector<FFrameContext> FrameContexts;
 	FClearColor BackBufferClearColor;
+
+	ComPointer<ID3D12DescriptorHeap> DSVDescriptorHeap;
+
+	std::shared_ptr<FD3D12DepthStencil> DepthStencil;
 };

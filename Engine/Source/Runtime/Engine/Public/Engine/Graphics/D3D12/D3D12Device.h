@@ -43,6 +43,7 @@ public:
 
 	[[nodiscard]] D3D_SHADER_MODEL GetShaderModel() const { return ShaderModel; }
 	[[nodiscard]] DXGI_FORMAT GetRenderTargetViewFormat() const { return RenderTargetViewFormat; }
+	[[nodiscard]] DXGI_FORMAT GetDepthStencilViewFormat() const { return DepthStencilViewFormat; }
 
 private:
 	ComPointer<IDXGIAdapter4> GetSuitableAdapter(const FD3D12AdapterRequirements& Requirements);
