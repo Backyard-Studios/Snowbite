@@ -9,6 +9,10 @@
 
 #include <spdlog/async_logger.h>
 
+#include "imgui.h"
+
+class IApplication;
+
 class SNOWBITE_API FLogging
 {
 public:
@@ -21,7 +25,8 @@ private:
 private:
 	static std::shared_ptr<spdlog::async_logger> Logger;
 
-	friend SNOWBITE_API uint32_t LaunchSnowbite(int ArgumentCount, char* Arguments[]);
+	friend SNOWBITE_API uint32_t LaunchSnowbite(int ArgumentCount, char* Arguments[], ImGuiContext* GlobalImGuiContext,
+	                                            std::shared_ptr<IApplication> Application);
 };
 
 #define SB_LOG_TRACE(...) SPDLOG_LOGGER_TRACE(FLogging::GetLogger(), __VA_ARGS__)

@@ -3,46 +3,10 @@
 #include <Engine/Engine.h>
 
 #include "imgui.h"
+#include "Engine/Graphics/D3D12/D3D12Utils.h"
 
-class TestLayer : public ILayer
-{
-public:
-	void OnAttach() override
-	{
-	}
-
-	void OnDetach() override
-	{
-	}
-
-	void OnLogicUpdate() override
-	{
-	}
-
-	void OnRenderUpdate() override
-	{
-	}
-
-	void OnUIUpdate() override
-	{
-		ImGui::Begin(GetName());
-		ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
-		bool bIsVSyncEnabled = GetEngine()->GetRenderer()->IsVSyncEnabled();
-		ImGui::Checkbox("VSync", &bIsVSyncEnabled);
-		GetEngine()->GetRenderer()->SetVSync(bIsVSyncEnabled);
-		ImGui::End();
-	}
-
-	ELayerType GetType() const override { return ELayerType::Overlay; }
-	const char* GetName() const override { return "TestLayer"; }
-
-private:
-};
-
-std::shared_ptr<TestLayer> TestLayerInstance = std::make_shared<TestLayer>();
-
-FEngine::FEngine(const FArgumentParser& InArgumentParser)
-	: ArgumentParser(InArgumentParser)
+FEngine::FEngine(const FArgumentParser& InArgumentParser, std::shared_ptr<IApplication> InApplication)
+	: ArgumentParser(InArgumentParser), Application(std::move(InApplication))
 {
 }
 
@@ -61,6 +25,9 @@ HRESULT FEngine::Initialize()
 	SB_LOG_INFO("\t- Mode: {}", IsHeadless() ? "Headless" : "Standard");
 	SB_LOG_INFO("Main thread id is {}", GetCurrentThreadId());
 	LayerStack = std::make_unique<FLayerStack>();
+	const HRESULT ApplicationInitializeResult = Application->Initialize();
+	SB_D3D_ASSERT_RETURN(ApplicationInitializeResult, "Failed to initialize application");
+	SB_LOG_INFO("Application '{}' initialized", Application->GetName());
 	if (!IsHeadless())
 	{
 		FWindowDesc MainWindowDesc{};
@@ -75,7 +42,6 @@ HRESULT FEngine::Initialize()
 		{
 			Renderer->Resize(InWidth, InHeight);
 		});
-		LayerStack->PushLayer(TestLayerInstance);
 	}
 	return S_OK;
 }
@@ -107,12 +73,9 @@ void FEngine::Run()
 			if (GetAsyncKeyState(VK_F11) & 1)
 				MainWindow->SetFullscreen(!MainWindow->IsFullscreen());
 
-			if (GetAsyncKeyState(VK_INSERT) & 1)
-				LayerStack->PushLayer(TestLayerInstance);
-			if (GetAsyncKeyState(VK_END) & 1)
-				LayerStack->PopLayer(TestLayerInstance);
-
 			for (const std::shared_ptr<ILayer>& Layer : LayerStack->GetLayers())
+				Layer->OnLogicUpdate();
+			for (const std::shared_ptr<ILayer>& Layer : Application->GetLayerStack()->GetLayers())
 				Layer->OnLogicUpdate();
 
 			const HRESULT BeginFrameResult = Renderer->BeginFrame();
@@ -121,17 +84,23 @@ void FEngine::Run()
 			{
 				for (const std::shared_ptr<ILayer>& Layer : LayerStack->GetLayers())
 					Layer->OnRenderUpdate();
+				for (const std::shared_ptr<ILayer>& Layer : Application->GetLayerStack()->GetLayers())
+					Layer->OnRenderUpdate();
 
 				Renderer->BeginUIFrame();
-				for (const std::shared_ptr<ILayer>& Layer : LayerStack->GetLayers())
-					Layer->OnUIUpdate();
-				LayerStack->ShowDebugUI();
+				{
+					for (const std::shared_ptr<ILayer>& Layer : LayerStack->GetLayers())
+						Layer->OnUIUpdate();
+					for (const std::shared_ptr<ILayer>& Layer : Application->GetLayerStack()->GetLayers())
+						Layer->OnUIUpdate();
+				}
 				Renderer->EndUIFrame();
 			}
 			const HRESULT EndFrameResult = Renderer->EndFrame();
 			if (FAILED(EndFrameResult))
 				break;
 			LayerStack->HandleDeferredLayerChanges();
+			Application->GetLayerStack()->HandleDeferredLayerChanges();
 		}
 	}
 }
@@ -140,13 +109,14 @@ HRESULT FEngine::Shutdown(const HRESULT ExitCode)
 {
 	SB_LOG_INFO("Shutting down...");
 	LayerStack->Shutdown();
-	TestLayerInstance.reset();
 	if (!IsHeadless())
 	{
 		MainWindow->SetOnClientResizeCallback(nullptr);
 		SB_SAFE_RESET(Renderer)
 		SB_SAFE_RESET(MainWindow)
 	}
+	Application->Shutdown();
+	SB_LOG_INFO("Shutdown complete");
 	SB_SAFE_RESET(LayerStack)
 	return ExitCode;
 }

@@ -51,9 +51,10 @@ void FLayerStack::HandleDeferredLayerChanges()
 	});
 }
 
-void FLayerStack::ShowDebugUI()
+void FLayerStack::ShowDebugUI(const char* Title)
 {
-	ImGui::Begin("LayerStack");
+	ImGui::SetNextWindowSizeConstraints(ImVec2(180, 100), ImVec2(180, FLT_MAX));
+	ImGui::Begin(Title, nullptr, ImGuiWindowFlags_NoCollapse);
 	if (!Layers.empty())
 	{
 		ImGui::Columns(2);

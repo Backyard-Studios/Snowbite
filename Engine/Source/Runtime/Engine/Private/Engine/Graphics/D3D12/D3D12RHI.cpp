@@ -4,6 +4,7 @@
 
 #include "backends/imgui_impl_dx12.h"
 #include "backends/imgui_impl_win32.h"
+#include "Engine/Engine.h"
 #include "Engine/Graphics/D3D12/D3D12Utils.h"
 
 FD3D12RHI::FD3D12RHI(const FD3D12RHISettings& InSettings)
@@ -81,8 +82,6 @@ HRESULT FD3D12RHI::Initialize()
 	Settings.Window->SetTitle(std::format("Snowbite | {} ({})", GetName(),
 	                                      D3D12Utils::ShaderModelToMajorString(Device->GetShaderModel())).c_str());
 
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
 	ImGuiIO& IO = ImGui::GetIO();
 	IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	IO.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;

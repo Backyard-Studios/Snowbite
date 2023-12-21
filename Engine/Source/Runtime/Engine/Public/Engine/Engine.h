@@ -4,6 +4,7 @@
 
 #include <memory>
 
+#include "Application/Application.h"
 #include "Application/LayerStack.h"
 #include "Core/ArgumentParser.h"
 #include "Graphics/Renderer.h"
@@ -15,7 +16,7 @@ SB_EXPORT_STL_CONTAINER(std::shared_ptr, FEngine)
 class SNOWBITE_API FEngine
 {
 public:
-	FEngine(const FArgumentParser& InArgumentParser);
+	FEngine(const FArgumentParser& InArgumentParser, std::shared_ptr<IApplication> InApplication);
 	~FEngine() = default;
 	SB_DISABLE_COPY_AND_MOVE(FEngine)
 
@@ -30,6 +31,7 @@ public:
 
 	[[nodiscard]] std::shared_ptr<FWindow> GetMainWindow() const { return MainWindow; }
 	[[nodiscard]] std::shared_ptr<FRenderer> GetRenderer() const { return Renderer; }
+	[[nodiscard]] std::shared_ptr<IApplication> GetApplication() const { return Application; }
 
 private:
 	HRESULT Initialize();
@@ -44,15 +46,21 @@ private:
 
 private:
 	FArgumentParser ArgumentParser;
+	std::shared_ptr<IApplication> Application = nullptr;
+
 	bool bIsShutdownRequested = false;
 	bool bIsHeadless = false;
 
+	/**
+	 * This layer stack is used for engine specific debug overlays
+	 */
 	std::unique_ptr<FLayerStack> LayerStack = nullptr;
 
 	std::shared_ptr<FWindow> MainWindow = nullptr;
 	std::shared_ptr<FRenderer> Renderer = nullptr;
 
-	friend SNOWBITE_API uint32_t LaunchSnowbite(int ArgumentCount, char* Arguments[]);
+	friend SNOWBITE_API uint32_t LaunchSnowbite(int ArgumentCount, char* Arguments[], ImGuiContext* GlobalImGuiContext,
+	                                            std::shared_ptr<IApplication> Application);
 	friend SNOWBITE_API std::shared_ptr<FEngine> GetEngine();
 };
 

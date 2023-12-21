@@ -6,7 +6,7 @@
 - [x] ImGui Integration
 - [ ] Input
 - [ ] Application Abstraction
-- [ ] Layer Based Architecture
+- [x] Layer Based Architecture
 - [ ] Thread Pool / Job System
 - [ ] Asset Loading
 - [ ] Shader Library

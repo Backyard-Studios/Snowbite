@@ -84,13 +84,16 @@ BOOL WINAPI ControlHandler(const DWORD ControlType)
 	}
 }
 
-uint32_t LaunchSnowbite(const int ArgumentCount, char* Arguments[])
+uint32_t LaunchSnowbite(const int ArgumentCount, char* Arguments[], ImGuiContext* GlobalImGuiContext,
+                        std::shared_ptr<IApplication> Application)
 {
 	SetUnhandledExceptionFilter(HandleException);
 	SetConsoleCtrlHandler(ControlHandler, TRUE);
 	FLogging::Initialize();
 	FArgumentParser ArgumentParser(ArgumentCount, Arguments);
-	FEngine::EngineInstance = std::make_shared<FEngine>(ArgumentParser);
+	IMGUI_CHECKVERSION();
+	ImGui::SetCurrentContext(GlobalImGuiContext);
+	FEngine::EngineInstance = std::make_shared<FEngine>(ArgumentParser, Application);
 	const HRESULT InitializeResult = GetEngine()->Initialize();
 	if (SUCCEEDED(InitializeResult))
 		GetEngine()->Run();
