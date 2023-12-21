@@ -25,6 +25,7 @@ private:
 };
 
 #define SB_LOG_TRACE(...) SPDLOG_LOGGER_TRACE(FLogging::GetLogger(), __VA_ARGS__)
+#define SB_LOG_DEBUG(...) SPDLOG_LOGGER_DEBUG(FLogging::GetLogger(), __VA_ARGS__)
 #define SB_LOG_INFO(...) SPDLOG_LOGGER_INFO(FLogging::GetLogger(), __VA_ARGS__)
 #define SB_LOG_WARN(...) SPDLOG_LOGGER_WARN(FLogging::GetLogger(), __VA_ARGS__)
 #define SB_LOG_ERROR(...) SPDLOG_LOGGER_ERROR(FLogging::GetLogger(), __VA_ARGS__)

@@ -27,7 +27,7 @@ HRESULT FEngine::Initialize()
 		MainWindow = std::make_shared<FWindow>(MainWindowDesc);
 
 		FRendererSettings RendererSettings;
-		RendererSettings.BufferingMode = EBufferingMode::TripleBuffering;
+		RendererSettings.BufferingMode = EBufferingMode::DoubleBuffering;
 		RendererSettings.Window = MainWindow;
 		Renderer = std::make_shared<FRenderer>(RendererSettings);
 		Renderer->SetClearColor(FClearColor(0.083f, 0.083f, 0.083f, 1.0f));
@@ -57,10 +57,14 @@ void FEngine::Run()
 			if (GetAsyncKeyState(VK_F11) & 1)
 				MainWindow->SetFullscreen(!MainWindow->IsFullscreen());
 
-			Renderer->BeginFrame();
+			const HRESULT BeginFrameResult = Renderer->BeginFrame();
+			if (FAILED(BeginFrameResult))
+				break;
 			{
 			}
-			Renderer->EndFrame();
+			const HRESULT EndFrameResult = Renderer->EndFrame();
+			if (FAILED(EndFrameResult))
+				break;
 		}
 	}
 }

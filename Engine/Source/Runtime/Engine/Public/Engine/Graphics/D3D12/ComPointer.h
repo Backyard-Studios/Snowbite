@@ -35,7 +35,7 @@
 */
 
 // ReSharper disable once CppUnusedIncludeDirective
-#include <Engine/Graphics/DirectXInclude.h>
+#include <Engine/Graphics/D3D12/D3D12Include.h>
 #include <type_traits>
 
 

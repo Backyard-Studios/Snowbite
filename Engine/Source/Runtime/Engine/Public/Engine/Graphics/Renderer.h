@@ -4,10 +4,12 @@
 
 #include "BufferingMode.h"
 #include "ClearColor.h"
-#include "GraphicsDevice.h"
+#include "RHI.h"
+#include "Window.h"
 
 struct SNOWBITE_API FRendererSettings
 {
+	ERHIType RHIType = ERHIType::D3D12;
 	EBufferingMode BufferingMode = EBufferingMode::TripleBuffering;
 	std::shared_ptr<FWindow> Window;
 };
@@ -21,11 +23,14 @@ public:
 	void Resize(uint32_t InWidth, uint32_t InHeight) const;
 	void SetClearColor(FClearColor InClearColor);
 
-	void BeginFrame() const;
-	void EndFrame() const;
+	HRESULT BeginFrame() const;
+	HRESULT EndFrame() const;
+
+	ERHIType GetRHIType() const { return Settings.RHIType; }
+	const char* GetRHIName() const { return RHI->GetName(); }
 
 private:
 	FRendererSettings Settings;
-	std::shared_ptr<FGraphicsDevice> GraphicsDevice;
+	std::shared_ptr<IStaticRHI> RHI;
 	FClearColor ClearColor;
 };

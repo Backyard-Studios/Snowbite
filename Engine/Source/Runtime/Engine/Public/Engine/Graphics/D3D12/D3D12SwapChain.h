@@ -1,13 +1,13 @@
 ﻿#pragma once
 
 #include <Engine/Core/Definitions.h>
-#include <Engine/Graphics/DirectXInclude.h>
 
-#include "Window.h"
+#include "D3D12Device.h"
+#include "Engine/Graphics/Window.h"
 
 class FGraphicsDevice;
 
-struct SNOWBITE_API FSwapChainDesc
+struct SNOWBITE_API FD3D12SwapChainDesc
 {
 	uint32_t Width = 0;
 	uint32_t Height = 0;
@@ -16,14 +16,18 @@ struct SNOWBITE_API FSwapChainDesc
 	std::shared_ptr<FWindow> Window;
 };
 
-class SNOWBITE_API FSwapChain
+class SNOWBITE_API FD3D12SwapChain
 {
 public:
-	FSwapChain(FGraphicsDevice* InGraphicsDevice, const FSwapChainDesc& InDesc);
-	~FSwapChain();
+	FD3D12SwapChain(const ComPointer<IDXGIFactory7>& InFactory, const ComPointer<ID3D12Device10>& InDevice,
+	                const ComPointer<ID3D12CommandQueue>& InCommandQueue, const FD3D12SwapChainDesc& InDesc);
+	~FD3D12SwapChain();
 
-	void Resize(uint32_t InWidth, uint32_t InHeight);
-	void Present(bool bShouldVSync = true);
+	HRESULT Initialize();
+	void Destroy();
+
+	HRESULT Resize(uint32_t InWidth, uint32_t InHeight);
+	HRESULT Present(bool bShouldVSync = true);
 
 	[[nodiscard]] uint32_t GetFrameIndex();
 	[[nodiscard]] ComPointer<ID3D12Resource2> GetBackBuffer();
@@ -32,15 +36,18 @@ public:
 	[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetBackBufferDescriptor(uint32_t Index) const;
 
 private:
-	void QueryBackBuffers();
+	HRESULT QueryBackBuffers();
 	void ReleaseBackBuffers();
 
 private:
-	FGraphicsDevice* GraphicsDevice;
-	FSwapChainDesc Desc;
+	ComPointer<IDXGIFactory7> Factory;
+	ComPointer<ID3D12Device10> Device;
+	ComPointer<ID3D12CommandQueue> CommandQueue;
+	FD3D12SwapChainDesc Desc;
 
 	uint32_t SwapChainCreationFlags = 0;
 	ComPointer<IDXGISwapChain4> SwapChain;
+	ComPointer<ID3D12DescriptorHeap> RtvDescriptorHeap;
 	std::vector<ComPointer<ID3D12Resource2>> BackBuffers;
 	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> BackBufferDescriptors;
 };
