@@ -17,7 +17,6 @@ HRESULT FD3D12CommandList::Initialize()
 {
 	const HRESULT CreateAllocatorResult = Device->CreateCommandAllocator(Type, IID_PPV_ARGS(&CommandAllocator));
 	SB_D3D_ASSERT_RETURN(CreateAllocatorResult, "Unable to create command allocator");
-	CommandAllocator->SetName(StringToWideChar((Name + std::string(" (Allocator)")).c_str()));
 	const HRESULT CreateListResult = Device->CreateCommandList(0, Type, CommandAllocator, nullptr,
 	                                                           IID_PPV_ARGS(&CommandList));
 	SB_D3D_ASSERT_RETURN(CreateListResult, "Unable to create command list");
