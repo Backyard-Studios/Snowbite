@@ -29,6 +29,8 @@ FRenderer::~FRenderer()
 
 void FRenderer::Resize(const uint32_t InWidth, const uint32_t InHeight) const
 {
+	const HRESULT ResizeResult = RHI->Resize(InWidth, InHeight);
+	SB_D3D_ASSERT(ResizeResult, "Failed to resize renderer");
 }
 
 void FRenderer::SetClearColor(const FClearColor InClearColor)

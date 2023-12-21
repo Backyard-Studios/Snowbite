@@ -18,7 +18,7 @@ struct SNOWBITE_API FD3D12RHISettings
 	bool bEnableGPUValidation = false;
 };
 
-struct FFrameData
+struct FFrameContext
 {
 	std::shared_ptr<FD3D12Fence> Fence;
 	std::shared_ptr<FD3D12CommandList> CommandList;
@@ -34,9 +34,11 @@ public:
 	void Shutdown() override;
 
 	HRESULT PrepareNextFrame() override;
-	HRESULT WaitForFrame(uint32_t Index) override;
 	HRESULT PresentFrame() override;
+	HRESULT WaitForFrame(uint32_t Index) override;
 	HRESULT FlushFrames(uint32_t Count) override;
+
+	HRESULT Resize(uint32_t InWidth, uint32_t InHeight) override;
 
 	void SetBackBufferClearColor(const FClearColor& ClearColor) override;
 
@@ -49,14 +51,17 @@ public:
 private:
 	HRESULT CreateSwapChain();
 
-	HRESULT InitializePerFrameData();
-	void DestroyPerFrameData();
+	HRESULT InitializeFrameContexts();
+	void DestroyFrameContexts();
 
 private:
 	FD3D12RHISettings Settings;
 
 	uint32_t BufferCount = 0;
 	uint32_t BufferIndex = 0;
+
+	uint32_t Width = 0;
+	uint32_t Height = 0;
 
 #pragma region DebugLayer
 	ComPointer<IDXGIDebug1> DXGIDebug;
@@ -67,6 +72,6 @@ private:
 	ComPointer<ID3D12CommandQueue> GraphicsCommandQueue;
 	std::shared_ptr<FD3D12SwapChain> SwapChain;
 
-	std::vector<FFrameData> PerFrameData;
+	std::vector<FFrameContext> FrameContexts;
 	FClearColor BackBufferClearColor;
 };

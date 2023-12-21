@@ -13,6 +13,8 @@ FD3D12RHI::~FD3D12RHI() = default;
 
 HRESULT FD3D12RHI::Initialize()
 {
+	Width = Settings.Window->GetWidth();
+	Height = Settings.Window->GetHeight();
 	if (Settings.bEnableDebugLayer)
 	{
 		const HRESULT GetDXGIDebugInterfaceResult = DXGIGetDebugInterface1(0, IID_PPV_ARGS(&DXGIDebug));
@@ -52,7 +54,7 @@ HRESULT FD3D12RHI::Initialize()
 	const HRESULT CreateSwapChainResult = CreateSwapChain();
 	SB_D3D_ASSERT_RETURN(CreateSwapChainResult, "Unable to create swap chain");
 
-	const HRESULT InitializePerFrameDataResult = InitializePerFrameData();
+	const HRESULT InitializePerFrameDataResult = InitializeFrameContexts();
 	SB_D3D_ASSERT_RETURN(InitializePerFrameDataResult, "Unable to initialize per frame data");
 
 	Settings.Window->SetTitle(std::format("Snowbite | {} ({})", GetName(),
@@ -63,7 +65,7 @@ HRESULT FD3D12RHI::Initialize()
 void FD3D12RHI::Shutdown()
 {
 	FlushFrames(BufferCount);
-	DestroyPerFrameData();
+	DestroyFrameContexts();
 	SwapChain->Destroy();
 	SB_SAFE_RESET(SwapChain);
 	GraphicsCommandQueue.Release();
@@ -86,13 +88,12 @@ void FD3D12RHI::Shutdown()
 HRESULT FD3D12RHI::PrepareNextFrame()
 {
 	BufferIndex = SwapChain->GetFrameIndex();
-	const FFrameData FrameData = PerFrameData[BufferIndex];
-	const std::shared_ptr<FD3D12CommandList> CommandListContainer = FrameData.CommandList;
+	const FFrameContext FrameContext = FrameContexts[BufferIndex];
+	const std::shared_ptr<FD3D12CommandList> CommandListContainer = FrameContext.CommandList;
 	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandListContainer->GetNativeList();
 	const HRESULT ResetResult = CommandListContainer->Reset();
 	SB_D3D_FAILED_RETURN(ResetResult);
 
-	// Transition back buffer to render target
 	D3D12_RESOURCE_BARRIER Barrier;
 	Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 	Barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -111,11 +112,34 @@ HRESULT FD3D12RHI::PrepareNextFrame()
 	return S_OK;
 }
 
+HRESULT FD3D12RHI::PresentFrame()
+{
+	const FFrameContext FrameContext = FrameContexts[BufferIndex];
+	const std::shared_ptr<FD3D12CommandList> CommandListContainer = FrameContext.CommandList;
+	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandListContainer->GetNativeList();
+
+	D3D12_RESOURCE_BARRIER Barrier;
+	Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	Barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	Barrier.Transition.pResource = SwapChain->GetBackBuffer().Get();
+	Barrier.Transition.Subresource = 0;
+	Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	Barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+	CommandList->ResourceBarrier(1, &Barrier);
+
+	const std::shared_ptr<FD3D12Fence> Fence = FrameContext.Fence;
+	const HRESULT ExecuteResult = CommandListContainer->Execute(GraphicsCommandQueue, Fence);
+	SB_D3D_FAILED_RETURN(ExecuteResult);
+	const HRESULT PresentResult = SwapChain->Present(true);
+	SB_D3D_FAILED_RETURN(PresentResult);
+	return S_OK;
+}
+
 HRESULT FD3D12RHI::WaitForFrame(const uint32_t Index)
 {
-	const HRESULT SignalResult = PerFrameData[Index].Fence->Signal(GraphicsCommandQueue);
+	const HRESULT SignalResult = FrameContexts[Index].Fence->Signal(GraphicsCommandQueue);
 	SB_D3D_FAILED_RETURN(SignalResult);
-	const HRESULT WaitResult = PerFrameData[Index].Fence->WaitOnCPU();
+	const HRESULT WaitResult = FrameContexts[Index].Fence->WaitOnCPU();
 	SB_D3D_FAILED_RETURN(WaitResult);
 	return S_OK;
 }
@@ -135,33 +159,19 @@ HRESULT FD3D12RHI::FlushFrames(uint32_t Count)
 	return S_OK;
 }
 
+HRESULT FD3D12RHI::Resize(const uint32_t InWidth, const uint32_t InHeight)
+{
+	FlushFrames(BufferCount);
+	Width = InWidth;
+	Height = InHeight;
+	const HRESULT ResizeResult = SwapChain->Resize(Width, Height);
+	SB_D3D_FAILED_RETURN(ResizeResult);
+	return S_OK;
+}
+
 void FD3D12RHI::SetBackBufferClearColor(const FClearColor& ClearColor)
 {
 	BackBufferClearColor = ClearColor;
-}
-
-HRESULT FD3D12RHI::PresentFrame()
-{
-	const FFrameData FrameData = PerFrameData[BufferIndex];
-	const std::shared_ptr<FD3D12CommandList> CommandListContainer = FrameData.CommandList;
-	ComPointer<ID3D12GraphicsCommandList7> CommandList = CommandListContainer->GetNativeList();
-
-	// Transition back buffer to present
-	D3D12_RESOURCE_BARRIER Barrier;
-	Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	Barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	Barrier.Transition.pResource = SwapChain->GetBackBuffer().Get();
-	Barrier.Transition.Subresource = 0;
-	Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	Barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-	CommandList->ResourceBarrier(1, &Barrier);
-
-	const std::shared_ptr<FD3D12Fence> Fence = FrameData.Fence;
-	const HRESULT ExecuteResult = CommandListContainer->Execute(GraphicsCommandQueue, Fence);
-	SB_D3D_FAILED_RETURN(ExecuteResult);
-	const HRESULT PresentResult = SwapChain->Present(true);
-	SB_D3D_FAILED_RETURN(PresentResult);
-	return S_OK;
 }
 
 uint32_t FD3D12RHI::GetBufferCount() const
@@ -177,8 +187,8 @@ uint32_t FD3D12RHI::GetBufferIndex() const
 HRESULT FD3D12RHI::CreateSwapChain()
 {
 	FD3D12SwapChainDesc SwapChainDesc;
-	SwapChainDesc.Width = Settings.Window->GetWidth();
-	SwapChainDesc.Height = Settings.Window->GetHeight();
+	SwapChainDesc.Width = Width;
+	SwapChainDesc.Height = Height;
 	SwapChainDesc.BufferCount = BufferCount;
 	SwapChainDesc.Window = Settings.Window;
 	SwapChainDesc.Format = Device->GetRenderTargetViewFormat();
@@ -189,34 +199,34 @@ HRESULT FD3D12RHI::CreateSwapChain()
 	return S_OK;
 }
 
-HRESULT FD3D12RHI::InitializePerFrameData()
+HRESULT FD3D12RHI::InitializeFrameContexts()
 {
-	PerFrameData.resize(BufferCount);
+	FrameContexts.resize(BufferCount);
 	for (uint32_t Index = 0; Index < BufferCount; ++Index)
 	{
-		PerFrameData[Index].Fence = Device->CreateFence(("FrameFence " + std::to_string(Index)).c_str());
-		const HRESULT InitializeFenceResult = PerFrameData[Index].Fence->Initialize();
+		FrameContexts[Index].Fence = Device->CreateFence(("FrameFence " + std::to_string(Index)).c_str());
+		const HRESULT InitializeFenceResult = FrameContexts[Index].Fence->Initialize();
 		SB_D3D_ASSERT_RETURN(InitializeFenceResult, "Unable to initialize fence for frame {}", Index);
 
-		PerFrameData[Index].CommandList = Device->CreateCommandList(D3D12_COMMAND_LIST_TYPE_DIRECT,
-		                                                            ("FrameCommandList " + std::to_string(Index)).
-		                                                            c_str());
-		const HRESULT InitializeCommandListResult = PerFrameData[Index].CommandList->Initialize();
+		FrameContexts[Index].CommandList = Device->CreateCommandList(D3D12_COMMAND_LIST_TYPE_DIRECT,
+		                                                             ("FrameCommandList " + std::to_string(Index)).
+		                                                             c_str());
+		const HRESULT InitializeCommandListResult = FrameContexts[Index].CommandList->Initialize();
 		SB_D3D_ASSERT_RETURN(InitializeCommandListResult, "Unable to initialize command list for frame {}", Index);
-		PerFrameData[Index].CommandList->Close();
+		FrameContexts[Index].CommandList->Close();
 	}
 	return S_OK;
 }
 
-void FD3D12RHI::DestroyPerFrameData()
+void FD3D12RHI::DestroyFrameContexts()
 {
-	for (FFrameData& FrameData : PerFrameData)
+	for (FFrameContext& FrameContext : FrameContexts)
 	{
-		FrameData.Fence->Destroy();
-		FrameData.Fence.reset();
+		FrameContext.Fence->Destroy();
+		FrameContext.Fence.reset();
 
-		FrameData.CommandList->Destroy();
-		FrameData.CommandList.reset();
+		FrameContext.CommandList->Destroy();
+		FrameContext.CommandList.reset();
 	}
-	PerFrameData.clear();
+	FrameContexts.clear();
 }
