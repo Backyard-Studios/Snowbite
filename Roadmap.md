@@ -5,7 +5,7 @@
 - [ ] **_Basic Rendering (Triangle, Camera, ...)_**
 - [x] ImGui Integration
 - [ ] Input
-- [ ] Application Abstraction
+- [x] Application Abstraction
 - [x] Layer Based Architecture
 - [ ] Thread Pool / Job System
 - [ ] Asset Loading
