@@ -9,3 +9,4 @@
 #include <Engine/Graphics/D3D12/ComPointer.h>
 #include <Engine/Graphics/D3D12/D3D12Helpers.h>
 #include <Engine/Graphics/D3D12/D3D12Utils.h>
+#include <D3D12MemAlloc.h>

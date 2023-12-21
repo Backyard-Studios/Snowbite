@@ -4,6 +4,7 @@ sb_shared_library('Engine')
 
   sb_link_project('spdlog', third_party_directory .. '/spdlog/include')
   sb_link_project('imgui', third_party_directory .. '/imgui')
+  sb_link_project('D3D12MemoryAllocator', third_party_directory .. '/D3D12MemoryAllocator/include')
 
   links {
     'dxgi.lib',

@@ -4,6 +4,7 @@
 
 #include "D3D12CommandList.h"
 #include "D3D12Fence.h"
+#include "D3D12MemAlloc.h"
 
 struct SNOWBITE_API FD3D12AdapterRequirements
 {
@@ -38,6 +39,7 @@ public:
 
 	[[nodiscard]] ComPointer<IDXGIAdapter4> GetAdapter() const { return Adapter; }
 	[[nodiscard]] ComPointer<ID3D12Device10> GetNativeDevice() const { return Device; }
+	[[nodiscard]] ComPointer<D3D12MA::Allocator> GetAllocator() const { return Allocator; }
 
 	[[nodiscard]] D3D_SHADER_MODEL GetShaderModel() const { return ShaderModel; }
 	[[nodiscard]] DXGI_FORMAT GetRenderTargetViewFormat() const { return RenderTargetViewFormat; }
@@ -52,6 +54,7 @@ private:
 	ComPointer<IDXGIAdapter4> Adapter;
 	DXGI_ADAPTER_DESC1 AdapterDesc;
 	ComPointer<ID3D12Device10> Device;
+	ComPointer<D3D12MA::Allocator> Allocator;
 
 	D3D_SHADER_MODEL ShaderModel = D3D_SHADER_MODEL_5_1;
 

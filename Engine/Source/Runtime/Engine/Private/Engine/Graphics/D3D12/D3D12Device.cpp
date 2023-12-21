@@ -43,13 +43,20 @@ HRESULT FD3D12Device::Initialize()
 		             D3D12Utils::DXGIFormatToString(DepthStencilViewFormat));
 		return E_D3D12_FORMAT_NOT_SUPPORTED;
 	}
+	D3D12MA::ALLOCATOR_DESC AllocatorDesc = {};
+	AllocatorDesc.pDevice = Device;
+	AllocatorDesc.pAdapter = Adapter;
+	AllocatorDesc.Flags = D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
+	const HRESULT CreateAllocatorResult = CreateAllocator(&AllocatorDesc, &Allocator);
+	SB_D3D_ASSERT_RETURN(CreateAllocatorResult, "Failed to create allocator");
 	return S_OK;
 }
 
 void FD3D12Device::Destroy()
 {
-	Adapter.Release();
+	Allocator.Release();
 	Device.Release();
+	Adapter.Release();
 }
 
 D3D_SHADER_MODEL FD3D12Device::GetHighestSupportedShaderModel(const D3D_SHADER_MODEL PreferredShaderModel)

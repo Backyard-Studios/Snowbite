@@ -4,3 +4,6 @@
 [submodule "Engine/Source/ThirdParty/imgui"]
 	path = Engine/Source/ThirdParty/imgui
 	url = https://github.com/ocornut/imgui
+[submodule "Engine/Source/ThirdParty/D3D12MemoryAllocator"]
+	path = Engine/Source/ThirdParty/D3D12MemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
