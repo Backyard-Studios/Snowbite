@@ -126,7 +126,7 @@ void FD3D12RHI::Shutdown()
 	}
 }
 
-HRESULT FD3D12RHI::PrepareNextFrame()
+HRESULT FD3D12RHI::BeginFrame()
 {
 	BufferIndex = SwapChain->GetFrameIndex();
 	const FFrameContext FrameContext = FrameContexts[BufferIndex];
@@ -158,7 +158,7 @@ HRESULT FD3D12RHI::PrepareNextFrame()
 	return S_OK;
 }
 
-HRESULT FD3D12RHI::PresentFrame(const bool bShouldVSync)
+HRESULT FD3D12RHI::EndFrame(const bool bShouldVSync)
 {
 	const FFrameContext FrameContext = FrameContexts[BufferIndex];
 	const std::shared_ptr<FD3D12CommandList> CommandListContainer = FrameContext.CommandList;

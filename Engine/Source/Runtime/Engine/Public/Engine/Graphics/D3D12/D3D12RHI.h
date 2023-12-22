@@ -34,8 +34,8 @@ public:
 	HRESULT Initialize() override;
 	void Shutdown() override;
 
-	HRESULT PrepareNextFrame() override;
-	HRESULT PresentFrame(bool bShouldVSync) override;
+	HRESULT BeginFrame() override;
+	HRESULT EndFrame(bool bShouldVSync) override;
 	HRESULT WaitForFrame(uint32_t Index) override;
 	HRESULT FlushFrames(uint32_t Count) override;
 

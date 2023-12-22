@@ -15,8 +15,8 @@ public:
 	virtual const char* GetName() const = 0;
 	virtual ERHIType GetType() const = 0;
 
-	virtual HRESULT PrepareNextFrame() = 0;
-	virtual HRESULT PresentFrame(bool bShouldVSync) = 0;
+	virtual HRESULT BeginFrame() = 0;
+	virtual HRESULT EndFrame(bool bShouldVSync) = 0;
 	virtual HRESULT WaitForFrame(uint32_t Index) = 0;
 	virtual HRESULT FlushFrames(uint32_t Count) = 0;
 

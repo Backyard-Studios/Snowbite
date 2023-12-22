@@ -46,14 +46,14 @@ void FRenderer::SetVSync(const bool bInIsVSyncEnabled)
 
 HRESULT FRenderer::BeginFrame() const
 {
-	const HRESULT PrepareResult = RHI->PrepareNextFrame();
+	const HRESULT PrepareResult = RHI->BeginFrame();
 	SB_D3D_FAILED_RETURN(PrepareResult);
 	return S_OK;
 }
 
 HRESULT FRenderer::EndFrame() const
 {
-	const HRESULT PresentResult = RHI->PresentFrame(bIsVSyncEnabled);
+	const HRESULT PresentResult = RHI->EndFrame(bIsVSyncEnabled);
 	SB_D3D_FAILED_RETURN(PresentResult);
 	return S_OK;
 }
