@@ -34,6 +34,7 @@ public:
 	 */
 	void HandleDeferredLayerChanges();
 
+	// Temporary
 	void ShowDebugUI(const char* Title = "LayerStack");
 
 	[[nodiscard]] std::vector<std::shared_ptr<ILayer>> GetLayers() const { return Layers; }

@@ -13,6 +13,8 @@
 // ReSharper disable once CppClangTidyCertDcl58Cpp
 SB_EXPORT_STL_CONTAINER(std::shared_ptr, FEngine)
 
+struct ImGuiContext;
+
 class SNOWBITE_API FEngine
 {
 public:

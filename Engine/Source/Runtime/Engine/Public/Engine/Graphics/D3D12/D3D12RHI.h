@@ -46,11 +46,11 @@ public:
 
 	void SetBackBufferClearColor(const FClearColor& ClearColor) override;
 
-	uint32_t GetBufferCount() const override;
-	uint32_t GetBufferIndex() const override;
+	[[nodiscard]] uint32_t GetBufferCount() const override;
+	[[nodiscard]] uint32_t GetBufferIndex() const override;
 
-	const char* GetName() const override { return "D3D12"; }
-	ERHIType GetType() const override { return ERHIType::D3D12; }
+	[[nodiscard]] const char* GetName() const override { return "D3D12"; }
+	[[nodiscard]] ERHIType GetType() const override { return ERHIType::D3D12; }
 
 private:
 	HRESULT CreateSwapChain();

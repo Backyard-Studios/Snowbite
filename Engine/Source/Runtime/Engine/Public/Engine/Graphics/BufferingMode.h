@@ -2,6 +2,10 @@
 
 #include <Engine/Core/Definitions.h>
 
+/**
+ * @brief Buffering mode enumeration.
+ * Buffering mode is used to determine how many back buffers are used for rendering.
+ */
 enum class SNOWBITE_API EBufferingMode : uint32_t
 {
 	DoubleBuffering = 2,
@@ -15,7 +19,7 @@ inline uint32_t GetBufferingModeCount(const EBufferingMode BufferingMode)
 
 inline const char* GetBufferingModeName(const EBufferingMode BufferingMode)
 {
-	switch (BufferingMode) 
+	switch (BufferingMode)
 	{
 	case EBufferingMode::DoubleBuffering:
 		return "DoubleBuffering";

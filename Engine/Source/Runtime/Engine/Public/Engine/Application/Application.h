@@ -4,6 +4,7 @@
 #include <Engine/Core/Assert.h>
 
 #include "LayerStack.h"
+#include <Windows.h>
 
 class SNOWBITE_API IApplication
 {
