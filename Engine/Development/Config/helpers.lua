@@ -160,18 +160,13 @@ function sb_copy_dll_to_directory(directory)
   sb_reset_filter()
 end
 
-function sb_runtime_executable(name)
+function sb_executable(name)
   sb_reset_filter()
 	sb_project(name)
     sb_default_files()
 		sb_default_include_directories()
 		sb_project_location(name)
 		sb_language_cpp()
-		filter { 'configurations:Debug' }
-			kind 'ConsoleApp'
-		filter { 'configurations:Release' }
-			kind 'ConsoleApp'
-		filter { 'configurations:Distribution' }
 			kind 'WindowedApp'
   sb_reset_filter()
 end
@@ -182,6 +177,17 @@ function sb_shared_library(name)
     sb_default_files()
     sb_default_include_directories()
 		kind 'SharedLib'
+    sb_project_location(name)
+    sb_language_cpp()
+  sb_reset_filter()
+end
+
+function sb_static_library(name)
+  sb_reset_filter()
+  sb_project(name)
+    sb_default_files()
+    sb_default_include_directories()
+    kind 'StaticLib'
     sb_project_location(name)
     sb_language_cpp()
   sb_reset_filter()
