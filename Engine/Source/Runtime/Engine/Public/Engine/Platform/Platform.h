@@ -5,7 +5,7 @@
 class FPlatform
 {
 public:
-	static HRESULT Initialize();
+	static HRESULT Initialize(HINSTANCE Instance);
 	static void Shutdown();
 
 	static void SetHighDpiAwareness(bool bIsAware);
@@ -14,10 +14,13 @@ public:
 	static void CollectCrashInfo(LPEXCEPTION_POINTERS ExceptionPointers, DWORD ThreadId);
 
 	[[nodiscard]] static uint32_t GetDpiScale() { return DpiScale; }
+	[[nodiscard]] static WNDCLASSEX GetWindowClass() { return WindowClass; }
 
 private:
 	static uint32_t CalculateDpiScale(HMODULE ShCoreModule);
+	static LRESULT CALLBACK WindowProc(HWND WindowHandle, UINT Message, WPARAM WParam, LPARAM LParam);
 
 private:
-	inline static uint32_t DpiScale = 0;
+	static uint32_t DpiScale;
+	static WNDCLASSEX WindowClass;
 };

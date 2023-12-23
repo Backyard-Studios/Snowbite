@@ -26,15 +26,34 @@ typedef BOOL (WINAPI *MINIDUMPWRITEDUMP)(HANDLE hProcess, DWORD dwPid, HANDLE hF
                                          PMINIDUMP_USER_STREAM_INFORMATION UserStreamParam,
                                          PMINIDUMP_CALLBACK_INFORMATION CallbackParam);
 
-HRESULT FPlatform::Initialize()
+uint32_t FPlatform::DpiScale = 96;
+WNDCLASSEX FPlatform::WindowClass = {};
+
+HRESULT FPlatform::Initialize(const HINSTANCE Instance)
 {
 	SetHighDpiAwareness(true);
 	DisableProcessWindowsGhosting();
+
+	WindowClass.cbSize = sizeof(WNDCLASSEX);
+	WindowClass.style = CS_DBLCLKS;
+	WindowClass.lpfnWndProc = WindowProc;
+	WindowClass.cbClsExtra = 0;
+	WindowClass.cbWndExtra = 0;
+	WindowClass.hInstance = Instance;
+	WindowClass.hIcon = nullptr;
+	WindowClass.hCursor = nullptr;
+	WindowClass.hbrBackground = nullptr;
+	WindowClass.lpszMenuName = nullptr;
+	WindowClass.lpszClassName = TEXT("SnowbiteDefaultWindowClass");
+	WindowClass.hIconSm = nullptr;
+	if (!RegisterClassEx(&WindowClass))
+		return E_FAIL;
 	return S_OK;
 }
 
 void FPlatform::Shutdown()
 {
+	UnregisterClass(WindowClass.lpszClassName, WindowClass.hInstance);
 }
 
 void FPlatform::SetHighDpiAwareness(const bool bIsAware)
@@ -120,4 +139,14 @@ uint32_t FPlatform::CalculateDpiScale(const HMODULE ShCoreModule)
 		FreeLibrary(ShCoreModule);
 	}
 	return (X + Y) / 2;
+}
+
+LRESULT FPlatform::WindowProc(const HWND WindowHandle, const UINT Message, const WPARAM WParam, const LPARAM LParam)
+{
+	if (WindowHandle != nullptr && FWindowManager::IsRegistered(WindowHandle))
+	{
+		const std::shared_ptr<FWindow> Window = FWindowManager::GetWindow(WindowHandle);
+		return Window->WndProc(Message, WParam, LParam);
+	}
+	return DefWindowProc(WindowHandle, Message, WParam, LParam);
 }
