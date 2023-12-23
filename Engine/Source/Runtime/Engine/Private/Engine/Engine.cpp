@@ -2,7 +2,28 @@
 
 #include <Engine/Engine.h>
 
-#define SB_CALL_SERVICES_WITH_RESULT(Method, ...) \
+/**
+ * Calls the specified lifecycle method. Only use this macro if the lifecycle method returns a result.
+ * @param Method The lifecycle method to call.
+ * @param ... The arguments to pass to the lifecycle method.
+ */
+#define SB_LIFECYCLE_WITH_RESULT(Method, ...) \
+	const HRESULT SB_UNIQUE_NAME(Result) = Method(__VA_ARGS__); \
+	if (FAILED(SB_UNIQUE_NAME(Result))) \
+	{ \
+		return SB_UNIQUE_NAME(Result); \
+	}
+
+/**
+ * Only exists to distinguish between normal methods and lifecycle methods.
+ * Calls the specified lifecycle method. Only use this macro if the lifecycle method does *not* return a result.
+ * @param Method The lifecycle method to call.
+ * @param ... The arguments to pass to the lifecycle method.
+ */
+#define SB_LIFECYCLE(Method, ...) \
+	Method(__VA_ARGS__);
+
+#define SB_SERVICES_LIFECYCLE_WITH_RESULT(Method, ...) \
 	for (const std::shared_ptr<IEngineService>& EngineService : EngineServices) \
 	{ \
 		const HRESULT Result = EngineService->Method(__VA_ARGS__); \
@@ -10,7 +31,7 @@
 			return Result; \
 	}
 
-#define SB_CALL_SERVICES(Method, ...) \
+#define SB_SERVICES_LIFECYCLE(Method, ...) \
 	for (const std::shared_ptr<IEngineService>& EngineService : EngineServices) \
 	{ \
 		EngineService->Method(__VA_ARGS__); \
@@ -26,24 +47,24 @@ uint32_t FEngine::EntryPoint(int ArgumentCount, char* ArgumentArray[])
 	// Register engine services
 	RegisterService<FWindowManagerService>();
 
-	PreInitialize();
+	SB_LIFECYCLE_WITH_RESULT(PreInitialize)
 
-	Initialize();
+	SB_LIFECYCLE_WITH_RESULT(Initialize)
 
-	PostInitialize();
+	SB_LIFECYCLE_WITH_RESULT(PostInitialize)
 	while (!bShouldExit)
 	{
-		EarlyUpdate();
+		SB_LIFECYCLE(EarlyUpdate)
 
-		Update();
+		SB_LIFECYCLE(Update)
 
-		LateUpdate();
+		SB_LIFECYCLE(LateUpdate)
 	}
-	BeforeShutdown();
+	SB_LIFECYCLE(BeforeShutdown)
 
-	Shutdown();
+	SB_LIFECYCLE(Shutdown)
 
-	AfterShutdown();
+	SB_LIFECYCLE(AfterShutdown)
 
 	// Unregister engine services
 	for (std::shared_ptr<IEngineService>& EngineService : EngineServices)
@@ -70,13 +91,13 @@ void FEngine::RegisterService(const std::shared_ptr<IEngineService>& EngineServi
 
 HRESULT FEngine::PreInitialize()
 {
-	SB_CALL_SERVICES_WITH_RESULT(PreInitialize)
+	SB_SERVICES_LIFECYCLE_WITH_RESULT(PreInitialize)
 	return S_OK;
 }
 
 HRESULT FEngine::Initialize()
 {
-	SB_CALL_SERVICES_WITH_RESULT(Initialize)
+	SB_SERVICES_LIFECYCLE_WITH_RESULT(Initialize)
 	FWindowDesc WindowDesc;
 	WindowDesc.bShouldRequestExitOnClose = true;
 	WindowDesc.bShouldAutoShow = false;
@@ -94,7 +115,7 @@ HRESULT FEngine::Initialize()
 
 HRESULT FEngine::PostInitialize()
 {
-	SB_CALL_SERVICES_WITH_RESULT(PostInitialize)
+	SB_SERVICES_LIFECYCLE_WITH_RESULT(PostInitialize)
 	MainWindow->Show();
 	MainWindow->Flash();
 	return S_OK;
@@ -102,22 +123,22 @@ HRESULT FEngine::PostInitialize()
 
 void FEngine::EarlyUpdate()
 {
-	SB_CALL_SERVICES(EarlyUpdate)
+	SB_SERVICES_LIFECYCLE(EarlyUpdate)
 }
 
 void FEngine::Update()
 {
-	SB_CALL_SERVICES(Update)
+	SB_SERVICES_LIFECYCLE(Update)
 }
 
 void FEngine::LateUpdate()
 {
-	SB_CALL_SERVICES(LateUpdate)
+	SB_SERVICES_LIFECYCLE(LateUpdate)
 }
 
 void FEngine::BeforeShutdown()
 {
-	SB_CALL_SERVICES(BeforeShutdown)
+	SB_SERVICES_LIFECYCLE(BeforeShutdown)
 }
 
 void FEngine::Shutdown()
@@ -126,10 +147,10 @@ void FEngine::Shutdown()
 	MainWindow.reset();
 	MainWindow = nullptr;
 
-	SB_CALL_SERVICES(Shutdown)
+	SB_SERVICES_LIFECYCLE(Shutdown)
 }
 
 void FEngine::AfterShutdown()
 {
-	SB_CALL_SERVICES(AfterShutdown)
+	SB_SERVICES_LIFECYCLE(AfterShutdown)
 }
