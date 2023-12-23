@@ -21,6 +21,7 @@ function sb_project(name)
   sb_reset_filter()
   project(name)
     sb_default_compiler_flags()
+    exceptionhandling 'SEH'
     filter { 'configurations:Debug' }
 			symbols 'On'
 			defines {
