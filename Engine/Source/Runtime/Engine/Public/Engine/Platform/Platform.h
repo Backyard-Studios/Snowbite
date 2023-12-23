@@ -8,10 +8,17 @@ public:
 	static HRESULT Initialize(HINSTANCE Instance);
 	static void Shutdown();
 
+	static void Fatal(HRESULT Code = E_FAIL);
+	static void Fatal(const std::string& Message, HRESULT Code = E_FAIL);
+
 	static void SetHighDpiAwareness(bool bIsAware);
 
 	static LONG CALLBACK SehExceptionHandler(EXCEPTION_POINTERS* ExceptionPointers);
 	static void CollectCrashInfo(LPEXCEPTION_POINTERS ExceptionPointers, DWORD ThreadId);
+
+	static bool IsMainThread() { return MainThreadId == GetCurrentThreadId(); }
+	static bool IsMainThread(const HANDLE ThreadHandle) { return MainThreadId == GetThreadId(ThreadHandle); }
+	static bool IsMainThread(const DWORD ThreadId) { return MainThreadId == ThreadId; }
 
 	[[nodiscard]] static uint32_t GetDpiScale() { return DpiScale; }
 	[[nodiscard]] static WNDCLASSEX GetWindowClass() { return WindowClass; }
@@ -23,4 +30,5 @@ private:
 private:
 	static uint32_t DpiScale;
 	static WNDCLASSEX WindowClass;
+	static DWORD MainThreadId;
 };

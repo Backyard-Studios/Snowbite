@@ -62,4 +62,6 @@ private:
 	static std::vector<std::shared_ptr<IEngineService>> EngineServices;
 
 	static std::shared_ptr<FWindow> MainWindow;
+
+	friend class FPlatform;
 };

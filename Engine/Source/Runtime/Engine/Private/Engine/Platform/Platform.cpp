@@ -28,9 +28,11 @@ typedef BOOL (WINAPI *MINIDUMPWRITEDUMP)(HANDLE hProcess, DWORD dwPid, HANDLE hF
 
 uint32_t FPlatform::DpiScale = 96;
 WNDCLASSEX FPlatform::WindowClass = {};
+DWORD FPlatform::MainThreadId = 0;
 
 HRESULT FPlatform::Initialize(const HINSTANCE Instance)
 {
+	MainThreadId = GetCurrentThreadId();
 	SetHighDpiAwareness(true);
 	DisableProcessWindowsGhosting();
 
@@ -56,6 +58,21 @@ void FPlatform::Shutdown()
 	UnregisterClass(WindowClass.lpszClassName, WindowClass.hInstance);
 }
 
+void FPlatform::Fatal(const HRESULT Code)
+{
+	Fatal("", Code);
+}
+
+void FPlatform::Fatal(const std::string& Message, const HRESULT Code)
+{
+	if (IsDebuggerPresent())
+		DebugBreak();
+	ULONG_PTR ExceptionArgs[3];
+	ExceptionArgs[0] = reinterpret_cast<ULONG_PTR>(Message.c_str());
+	ExceptionArgs[1] = Code;
+	RaiseException(E_FATAL_FAIL, EXCEPTION_NONCONTINUABLE, 3, ExceptionArgs);
+}
+
 void FPlatform::SetHighDpiAwareness(const bool bIsAware)
 {
 	const HMODULE ShCoreModule = LoadLibrary(TEXT("Shcore.dll"));
@@ -71,6 +88,41 @@ void FPlatform::SetHighDpiAwareness(const bool bIsAware)
 void FPlatform::CollectCrashInfo(const LPEXCEPTION_POINTERS ExceptionPointers,
                                  const DWORD ThreadId)
 {
+	if (ExceptionPointers->ExceptionRecord->ExceptionCode == E_FATAL_FAIL)
+	{
+		const char* Message = reinterpret_cast<const char*>(ExceptionPointers->ExceptionRecord->ExceptionInformation[
+			0]);
+		const HRESULT Code = static_cast<HRESULT>(ExceptionPointers->ExceptionRecord->ExceptionInformation[1]);
+		std::string ErrorMessage = "Fatal error occurred! Creating Crash Dump!";
+		if (Message != nullptr && strlen(Message) > 0)
+			ErrorMessage += "\n\n" + std::string(Message) + "\n";
+		else
+		{
+			LPSTR FormatErrorMessage = nullptr;
+			const size_t Size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+			                                   FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, Code,
+			                                   MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
+			                                   reinterpret_cast<LPSTR>(&FormatErrorMessage), 0, nullptr);
+			const std::string FormattedMessage(FormatErrorMessage, Size);
+			ErrorMessage += "\n\n" + FormattedMessage;
+		}
+		ErrorMessage += "\nError code: " + std::to_string(Code);
+		MessageBox(nullptr, ErrorMessage.c_str(), TEXT("Snowbite | Fatal Error"), MB_OK | MB_ICONERROR);
+	}
+	else
+	{
+		LPSTR ErrorMessage = nullptr;
+		const size_t Size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+		                                   FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
+		                                   ExceptionPointers->ExceptionRecord->ExceptionCode,
+		                                   MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
+		                                   reinterpret_cast<LPSTR>(&ErrorMessage), 0, nullptr);
+		const std::string FormattedMessage(ErrorMessage, Size);
+		std::string Message = "Fatal error occurred! Creating Crash Dump...";
+		Message += "\n\n" + FormattedMessage;
+		Message += "\nError code: " + std::to_string(ExceptionPointers->ExceptionRecord->ExceptionCode);
+		MessageBox(nullptr, Message.c_str(), TEXT("Snowbite | Fatal Error"), MB_OK | MB_ICONERROR);
+	}
 	FCrashInfo CrashInfo;
 	CrashInfo.ExceptionPointers = ExceptionPointers;
 	CrashInfo.ThreadId = ThreadId;
