@@ -24,24 +24,30 @@ function sb_project(name)
     filter { 'configurations:Debug' }
 			symbols 'On'
 			defines {
-				workspace_macro_prefix .. 'DEBUG',
-				'_DEBUG'
+				'_DEBUG=1',
+				workspace_macro_prefix .. 'DEBUG=1',
+        workspace_macro_prefix .. 'RELEASE=0',
+				workspace_macro_prefix .. 'DISTRIBUTION=0',
 			}
 		filter { 'configurations:Release' }
 			optimize 'On'
 			defines {
-				workspace_macro_prefix .. 'RELEASE',
-				'NDEBUG'
+				'NDEBUG=1',
+        workspace_macro_prefix .. 'DEBUG=0',
+				workspace_macro_prefix .. 'RELEASE=1',
+				workspace_macro_prefix .. 'DISTRIBUTION=0',
 			}
 		filter { 'configurations:Distribution' }
 			optimize 'On'
 			defines {
-				workspace_macro_prefix .. 'DISTRIBUTION',
-				'NDEBUG'
+				'NDEBUG=1',
+        workspace_macro_prefix .. 'DEBUG=0',
+				workspace_macro_prefix .. 'RELEASE=0',
+				workspace_macro_prefix .. 'DISTRIBUTION=1',
 			}
 		filter { 'system:windows' }
       defines {
-        workspace_macro_prefix .. 'OS_WINDOWS',
+        workspace_macro_prefix .. 'OS_WINDOWS=1',
         'WIN32_LEAN_AND_MEAN',
         'NOMINMAX',
       }
@@ -49,24 +55,43 @@ function sb_project(name)
 			disablewarnings { '4251' }
     filter { 'kind:StaticLib' }
 			defines {
-				workspace_macro_prefix .. 'LIBRARY',
-				workspace_macro_prefix .. 'LIBRARY_STATIC',
+				workspace_macro_prefix .. 'LIBRARY=1',
+				workspace_macro_prefix .. 'LIBRARY_STATIC=1',
+				workspace_macro_prefix .. 'LIBRARY_SHARED=0',
+        workspace_macro_prefix .. 'LIBRARY_EXPORT=1',
+        workspace_macro_prefix .. 'EXECUTABLE=0',
+        workspace_macro_prefix .. 'EXECUTABLE_CONSOLE=0',
+        workspace_macro_prefix .. 'EXECUTABLE_WINDOWED=0',
 			}
 		filter { 'kind:SharedLib' }
 			defines {
-				workspace_macro_prefix .. 'LIBRARY',
-				workspace_macro_prefix .. 'LIBRARY_SHARED',
-        workspace_macro_prefix .. 'LIBRARY_EXPORT',
+				workspace_macro_prefix .. 'LIBRARY=1',
+				workspace_macro_prefix .. 'LIBRARY_STATIC=0',
+				workspace_macro_prefix .. 'LIBRARY_SHARED=1',
+        workspace_macro_prefix .. 'LIBRARY_EXPORT=1',
+        workspace_macro_prefix .. 'EXECUTABLE=0',
+        workspace_macro_prefix .. 'EXECUTABLE_CONSOLE=0',
+        workspace_macro_prefix .. 'EXECUTABLE_WINDOWED=0',
 			}
 		filter { 'kind:ConsoleApp' }
 			defines {
-				workspace_macro_prefix .. 'EXECUTABLE',
-				workspace_macro_prefix .. 'EXECUTABLE_CONSOLE',
+				workspace_macro_prefix .. 'LIBRARY=0',
+				workspace_macro_prefix .. 'LIBRARY_STATIC=0',
+				workspace_macro_prefix .. 'LIBRARY_SHARED=0',
+        workspace_macro_prefix .. 'LIBRARY_EXPORT=0',
+        workspace_macro_prefix .. 'EXECUTABLE=1',
+        workspace_macro_prefix .. 'EXECUTABLE_CONSOLE=1',
+        workspace_macro_prefix .. 'EXECUTABLE_WINDOWED=0',
 			}
 		filter { 'kind:WindowedApp' }
 			defines {
-				workspace_macro_prefix .. 'EXECUTABLE',
-				workspace_macro_prefix .. 'EXECUTABLE_WINDOWED',
+				workspace_macro_prefix .. 'LIBRARY=0',
+				workspace_macro_prefix .. 'LIBRARY_STATIC=0',
+				workspace_macro_prefix .. 'LIBRARY_SHARED=0',
+        workspace_macro_prefix .. 'LIBRARY_EXPORT=0',
+        workspace_macro_prefix .. 'EXECUTABLE=1',
+        workspace_macro_prefix .. 'EXECUTABLE_CONSOLE=0',
+        workspace_macro_prefix .. 'EXECUTABLE_WINDOWED=1',
 			}
   sb_reset_filter()
 end
@@ -167,7 +192,12 @@ function sb_executable(name)
 		sb_default_include_directories()
 		sb_project_location(name)
 		sb_language_cpp()
-			kind 'WindowedApp'
+    filter { 'configurations:Debug' }
+      kind 'ConsoleApp'
+    filter { 'configurations:Release' }
+      kind 'ConsoleApp'
+    filter { 'configurations:Distribution' }
+      kind 'WindowedApp'
   sb_reset_filter()
 end
 
