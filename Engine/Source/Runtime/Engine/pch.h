@@ -16,3 +16,5 @@
 #include <Engine/Platform/Window.h>
 #include <Engine/Platform/WindowManager.h>
 #include <Engine/Engine.h>
+
+#include <Engine/Graphics/D3D12/D3D12Include.h>

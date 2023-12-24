@@ -4,7 +4,6 @@
 
 #include "Mutex.h"
 #include "Window.h"
-#include "Engine/Core/EngineService.h"
 
 class FWindowManager
 {
@@ -15,21 +14,16 @@ public:
 	static void Unregister(const std::shared_ptr<FWindow>& Window);
 	static void Unregister(HWND WindowHandle);
 
-	static std::shared_ptr<FWindow> GetWindow(HWND WindowHandle);
+	static void HandleWindowMessages();
+
+	[[nodiscard]] static std::shared_ptr<FWindow> GetWindow(HWND WindowHandle);
+	[[nodiscard]] static std::vector<std::shared_ptr<FWindow>> GetWindows();
+
+private:
+	[[nodiscard]] static HRESULT Initialize();
+	static void Shutdown();
 
 private:
 	static FMutex Mutex;
 	static std::vector<std::shared_ptr<FWindow>> Windows;
-
-	friend class FWindowManagerService;
-};
-
-class FWindowManagerService : public IEngineService
-{
-public:
-	HRESULT Initialize() override;
-	void EarlyUpdate() override;
-	void Shutdown() override;
-
-private:
 };

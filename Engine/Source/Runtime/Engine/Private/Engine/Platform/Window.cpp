@@ -83,12 +83,12 @@ void FWindow::SetFullscreen(const bool bShouldFullscreen)
 	Desc.bIsFullscreen = bShouldFullscreen;
 }
 
-void FWindow::SetSize(const FFloat2& InSize) const
+void FWindow::SetSize(const FUInt2& InSize) const
 {
 	SetWindowPos(NativeHandle, nullptr, 0, 0, InSize.X, InSize.Y, SWP_NOMOVE | SWP_NOZORDER);
 }
 
-void FWindow::SetPosition(const FFloat2& InPosition) const
+void FWindow::SetPosition(const FUInt2& InPosition) const
 {
 	SetWindowPos(NativeHandle, nullptr, InPosition.X, InPosition.Y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 }
@@ -104,33 +104,44 @@ LRESULT FWindow::WndProc(const UINT Message, const WPARAM WParam, const LPARAM L
 	{
 	case WM_SIZE:
 		{
-			const float Width = LOWORD(LParam);
-			const float Height = HIWORD(LParam);
+			const uint32_t Width = LOWORD(LParam);
+			const uint32_t Height = HIWORD(LParam);
 			if ((Width != Desc.Size.X || Height != Desc.Size.Y) && (Width != 0 && Height != 0))
-			{
-				Desc.Size = FFloat2(Width, Height);
-			}
+				OnResize(Width, Height);
 		}
 		break;
 	case WM_MOVE:
 		{
-			const float X = LOWORD(LParam);
-			const float Y = HIWORD(LParam);
+			const uint32_t X = LOWORD(LParam);
+			const uint32_t Y = HIWORD(LParam);
 			if (X != Desc.Position.X || Y != Desc.Position.Y)
-			{
-				Desc.Position = FFloat2(X, Y);
-			}
+				OnPositionChanged(X, Y);
 		}
 		break;
 	case WM_CLOSE:
-		bIsClosed = true;
-		if (Desc.bShouldUnregisterOnClose)
-			FWindowManager::Unregister(NativeHandle);
-		if (Desc.bShouldRequestExitOnClose)
-			FEngine::RequestExit();
+		OnClose();
 		break;
 	default:
 		break;
 	}
 	return DefWindowProc(NativeHandle, Message, WParam, LParam);
+}
+
+void FWindow::OnResize(const uint32_t Width, const uint32_t Height)
+{
+	Desc.Size = FUInt2(Width, Height);
+}
+
+void FWindow::OnClose()
+{
+	bIsClosed = true;
+	if (Desc.bShouldUnregisterOnClose)
+		FWindowManager::Unregister(NativeHandle);
+	if (Desc.bShouldRequestExitOnClose)
+		FEngine::RequestExit();
+}
+
+void FWindow::OnPositionChanged(const uint32_t X, const uint32_t Y)
+{
+	Desc.Position = FUInt2(X, Y);
 }

@@ -51,6 +51,12 @@ void FWindowManager::Unregister(HWND WindowHandle)
 	}));
 }
 
+void FWindowManager::HandleWindowMessages()
+{
+	for (const std::shared_ptr<FWindow> Window : Windows)
+		Window->HandleMessages();
+}
+
 std::shared_ptr<FWindow> FWindowManager::GetWindow(HWND WindowHandle)
 {
 	return *std::ranges::find_if(Windows, [WindowHandle](const std::shared_ptr<FWindow>& Window)
@@ -59,25 +65,19 @@ std::shared_ptr<FWindow> FWindowManager::GetWindow(HWND WindowHandle)
 	});
 }
 
-HRESULT FWindowManagerService::Initialize()
+std::vector<std::shared_ptr<FWindow>> FWindowManager::GetWindows()
 {
-	return IEngineService::Initialize();
+	return Windows;
 }
 
-void FWindowManagerService::EarlyUpdate()
+HRESULT FWindowManager::Initialize()
 {
-	for (const std::shared_ptr<FWindow> Window : FWindowManager::Windows)
-		Window->HandleMessages();
-	IEngineService::EarlyUpdate();
+	return S_OK;
 }
 
-void FWindowManagerService::Shutdown()
+void FWindowManager::Shutdown()
 {
-	for (std::shared_ptr<FWindow> Window : FWindowManager::Windows)
-	{
-		Window->Close();
+	for (std::shared_ptr<FWindow>& Window : Windows)
 		Window.reset();
-	}
-	FWindowManager::Windows.clear();
-	IEngineService::Shutdown();
+	Windows.clear();
 }

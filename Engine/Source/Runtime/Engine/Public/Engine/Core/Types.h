@@ -22,3 +22,26 @@ struct FFloat3
 	{
 	}
 };
+
+struct FUInt2
+{
+	uint32_t X = 0;
+	uint32_t Y = 0;
+
+	FUInt2(const uint32_t X, const uint32_t Y)
+		: X(X), Y(Y)
+	{
+	}
+};
+
+struct FUInt3
+{
+	uint32_t X = 0;
+	uint32_t Y = 0;
+	uint32_t Z = 0;
+
+	FUInt3(const uint32_t X, const uint32_t Y, const uint32_t Z)
+		: X(X), Y(Y), Z(Z)
+	{
+	}
+};

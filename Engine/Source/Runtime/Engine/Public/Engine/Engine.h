@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "Core/EngineService.h"
 
 class FEngine
 {
@@ -24,21 +23,7 @@ public:
 	static void Exit(uint32_t InExitCode = EXIT_FAILURE);
 
 public:
-	/**
-	 * @brief Registers an engine service.
-	 * @param EngineService The engine service to register. The engine will *not* take ownership of the service.
-	 */
-	static void RegisterService(const std::shared_ptr<IEngineService>& EngineService);
-
-	/**
-	 * @brief Registers an engine service.
-	 * @tparam T The type of the engine service to register. The engine will take ownership of the service.
-	 */
-	template <typename T>
-	static void RegisterService()
-	{
-		RegisterService(std::make_shared<T>());
-	}
+	[[nodiscard]] static std::shared_ptr<FWindow> GetMainWindow() { return MainWindow; }
 
 private:
 #pragma region Lifecycle Functions
@@ -58,8 +43,6 @@ private:
 private:
 	static bool bShouldExit;
 	static uint32_t ExitCode;
-
-	static std::vector<std::shared_ptr<IEngineService>> EngineServices;
 
 	static std::shared_ptr<FWindow> MainWindow;
 
