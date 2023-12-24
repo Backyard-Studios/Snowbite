@@ -61,3 +61,7 @@ Engine/Development/__pycache__
 *.stackdump
 
 imgui.ini
+
+!Engine/Source/ThirdParty/AgilitySDK/bin/**/*.dll
+!Engine/Source/ThirdParty/AgilitySDK/bin/**/*.exe
+!Engine/Source/ThirdParty/AgilitySDK/bin/**/*.pdb
