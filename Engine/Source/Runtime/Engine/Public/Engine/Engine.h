@@ -9,7 +9,7 @@ public:
 	 * @param ArgumentArray The array of arguments passed to the engine.
 	 * @return The exit code of the engine.
 	 */
-	static uint32_t EntryPoint(int ArgumentCount, char* ArgumentArray[]);
+	static HRESULT EntryPoint(int ArgumentCount, char* ArgumentArray[]);
 
 	/**
 	 * @brief Requests the engine to exit.

@@ -14,6 +14,7 @@
 #define SB_SAFE_DELETE_ARRAY(Pointer) if (Pointer) { delete[] (Pointer); (Pointer) = nullptr; }
 #define SB_SAFE_RESET(Pointer) if (Pointer) { (Pointer).reset(); (Pointer) = nullptr; }
 
-#define SB_CHECK_RESULT(Result, Message) if (FAILED(Result)) { FPlatform::Fatal(Message, Result); }
+#define SB_CHECK_RESULT(Result, Message) if (FAILED(Result)) { OutputDebugString(TEXT(Message)); return Result; }
+#define SB_CHECK_RESULT_FATAL(Result, Message) if (FAILED(Result)) { FPlatform::Fatal(Message, Result); }
 
 #define SB_RETURN_IF_FAILED(Result) if (FAILED(Result)) { return Result; }

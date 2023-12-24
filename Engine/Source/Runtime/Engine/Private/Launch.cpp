@@ -1,13 +1,22 @@
 ﻿#include "pch.h"
 
-#include "Engine/Engine.h"
 #include "Engine/Platform/Platform.h"
+#include "Engine/Engine.h"
+
+void GuardedMain(const int ArgumentCount, char** ArgumentArray)
+{
+	const HRESULT Result = FEngine::EntryPoint(ArgumentCount, ArgumentArray);
+	if (FAILED(Result))
+		FPlatform::Fatal("Engine entry point failed", Result);
+}
 
 #if SB_EXECUTABLE_CONSOLE
+#define SB_ARGUMENTS ArgumentCount, ArgumentArray
 #define SB_HINSTANCE GetModuleHandle(nullptr)
 
 int main(const int ArgumentCount, char** ArgumentArray)
 #else
+#define SB_ARGUMENTS __argc, __argv
 #define SB_HINSTANCE Instance
 
 int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CmdLine, int CmdShow)
@@ -17,7 +26,7 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CmdLine, int
 		return GetLastError();
 	__try
 	{
-		FEngine::EntryPoint(ArgumentCount, ArgumentArray);
+		GuardedMain(SB_ARGUMENTS);
 	}
 	__except (FPlatform::SehExceptionHandler(GetExceptionInformation()))
 	{

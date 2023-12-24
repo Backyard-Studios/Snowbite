@@ -12,4 +12,6 @@ private:
 
 private:
 	static std::shared_ptr<IGraphicsInterface> GraphicsInterface;
+
+	friend class FEngine;
 };

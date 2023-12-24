@@ -1,12 +1,11 @@
 # Roadmap
 
-- [x] Logging
+- [ ] Logging
 - [x] Windowing
 - [ ] **_Basic Rendering (Triangle, Camera, ...)_**
-- [x] ImGui Integration
+- [ ] ImGui Integration
 - [ ] Input
-- [x] Application Abstraction
-- [x] Layer Based Architecture
+- [ ] Layer Based Architecture
 - [ ] Thread Pool / Job System
 - [ ] Asset Loading
 - [ ] Shader Library
