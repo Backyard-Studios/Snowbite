@@ -17,4 +17,7 @@
 #include <Engine/Platform/WindowManager.h>
 #include <Engine/Engine.h>
 
+#include <Engine/Graphics/GraphicsInterface.h>
+#include <Engine/Graphics/GraphicsAdapter.h>
+#include <Engine/Graphics/GraphicsDevice.h>
 #include <Engine/Graphics/D3D12/D3D12Include.h>

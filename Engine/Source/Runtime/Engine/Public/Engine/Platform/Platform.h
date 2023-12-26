@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <cstdint>
+#include <source_location>
 
 class FPlatform
 {
@@ -15,6 +16,8 @@ public:
 
 	static LONG CALLBACK SehExceptionHandler(EXCEPTION_POINTERS* ExceptionPointers);
 	static void CollectCrashInfo(LPEXCEPTION_POINTERS ExceptionPointers, DWORD ThreadId);
+
+	static void PrintHRESULT(HRESULT Code, const std::source_location& Location = std::source_location::current());
 
 	static bool IsMainThread() { return MainThreadId == GetCurrentThreadId(); }
 	static bool IsMainThread(const HANDLE ThreadHandle) { return MainThreadId == GetThreadId(ThreadHandle); }

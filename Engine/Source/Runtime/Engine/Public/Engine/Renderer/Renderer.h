@@ -5,9 +5,11 @@
 class FRenderer
 {
 public:
+	[[nodiscard]] static HRESULT BeginFrame();
+	[[nodiscard]] static HRESULT EndFrame();
 
 private:
-	static HRESULT Initialize();
+	[[nodiscard]] static HRESULT Initialize();
 	static void Shutdown();
 
 private:

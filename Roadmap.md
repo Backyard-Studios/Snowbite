@@ -1,6 +1,9 @@
 # Roadmap
 
+The list has no particular order. It is just a list of features that I want to implement.
+
 - [ ] Logging
+- [ ] Rework HRESULT Error Handling
 - [x] Windowing
 - [ ] **_Basic Rendering (Triangle, Camera, ...)_**
 - [ ] ImGui Integration

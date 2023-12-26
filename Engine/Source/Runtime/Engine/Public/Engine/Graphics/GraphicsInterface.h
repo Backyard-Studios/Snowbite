@@ -1,9 +1,19 @@
 ﻿#pragma once
 
-class IGraphicsInterface
+#include "Engine/Core/Interface.h"
+
+class IGraphicsInterface : public IInterface<IGraphicsInterface>
+
 {
 public:
-	virtual ~IGraphicsInterface() = default;
+	IGraphicsInterface() : IInterface(this)
+	{
+	}
+
+	~IGraphicsInterface() override = default;
+
+	[[nodiscard]] virtual HRESULT BeginFrame() = 0;
+	[[nodiscard]] virtual HRESULT EndFrame() = 0;
 
 private:
 	[[nodiscard]] virtual HRESULT Initialize() = 0;

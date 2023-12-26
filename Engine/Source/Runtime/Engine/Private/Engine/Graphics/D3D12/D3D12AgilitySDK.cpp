@@ -2,7 +2,7 @@
 #include "pch.h"
 
 extern "C" {
-__declspec(dllexport) extern const UINT D3D12SDKVersion = 6;
+__declspec(dllexport) extern const UINT D3D12SDKVersion = 611;
 }
 
 extern "C" {

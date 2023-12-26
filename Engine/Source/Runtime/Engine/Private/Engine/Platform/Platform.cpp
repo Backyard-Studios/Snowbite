@@ -65,8 +65,6 @@ void FPlatform::Fatal(const HRESULT Code)
 
 void FPlatform::Fatal(const std::string& Message, const HRESULT Code)
 {
-	if (IsDebuggerPresent())
-		DebugBreak();
 	ULONG_PTR ExceptionArgs[3];
 	ExceptionArgs[0] = reinterpret_cast<ULONG_PTR>(Message.c_str());
 	ExceptionArgs[1] = Code;
@@ -159,6 +157,21 @@ void FPlatform::CollectCrashInfo(const LPEXCEPTION_POINTERS ExceptionPointers,
 		return 0;
 	}, &CrashInfo, 0, &CollectThreadId);
 	WaitForSingleObject(CollectThread, INFINITE);
+}
+
+void FPlatform::PrintHRESULT(const HRESULT Code, const std::source_location& Location)
+{
+	LPSTR FormatErrorMessage = nullptr;
+	const size_t Size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+	                                   FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, Code,
+	                                   MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
+	                                   reinterpret_cast<LPSTR>(&FormatErrorMessage), 0, nullptr);
+	const std::string FormattedMessage(FormatErrorMessage, Size);
+	std::string FileName = Location.file_name();
+	FileName = FileName.substr(FileName.find_last_of("\\") + 1);
+	std::cout << "[Error] Failed HRESULT in file " << FileName << " at line " << Location.line() <<
+		std::endl;
+	std::cout << "[Error] Message: " << FormattedMessage;
 }
 
 LONG FPlatform::SehExceptionHandler(EXCEPTION_POINTERS* ExceptionPointers)

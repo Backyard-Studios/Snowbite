@@ -7,7 +7,7 @@ void GuardedMain(const int ArgumentCount, char** ArgumentArray)
 {
 	const HRESULT Result = FEngine::EntryPoint(ArgumentCount, ArgumentArray);
 	if (FAILED(Result))
-		FPlatform::Fatal("Engine entry point failed", Result);
+		FPlatform::Fatal(Result);
 }
 
 #if SB_EXECUTABLE_CONSOLE
