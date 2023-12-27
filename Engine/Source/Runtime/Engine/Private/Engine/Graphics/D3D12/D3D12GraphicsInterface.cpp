@@ -8,6 +8,7 @@
 #include "Engine/Graphics/D3D12/D3D12Fence.h"
 #include "Engine/Graphics/D3D12/D3D12GraphicsAdapter.h"
 #include "Engine/Graphics/D3D12/D3D12GraphicsDevice.h"
+#include "Engine/Graphics/D3D12/D3D12SwapChain.h"
 
 FD3D12GraphicsInterface::FD3D12GraphicsInterface()
 {
@@ -19,25 +20,59 @@ FD3D12GraphicsInterface::~FD3D12GraphicsInterface()
 
 HRESULT FD3D12GraphicsInterface::BeginFrame()
 {
-	const std::shared_ptr<ICommandAllocator> CommandAllocator = Device->GetContext().CommandAllocators[0];
-	FD3D12CommandList* CommandList = Device->GetContext().CommandLists[0]->As<FD3D12CommandList>();
+	BackBufferIndex = Window->GetSwapChain()->GetBackBufferIndex();
+	const std::shared_ptr<ICommandAllocator> CommandAllocator = Device->GetContext().CommandAllocators[BackBufferIndex];
+	FD3D12CommandList* CommandList = Device->GetContext().CommandLists[BackBufferIndex]->As<FD3D12CommandList>();
 	const HRESULT AllocatorResetResult = CommandAllocator->Reset();
 	SB_CHECK_RESULT(AllocatorResetResult);
 	const HRESULT ListResetResult = CommandList->Reset(CommandAllocator);
 	SB_CHECK_RESULT(ListResetResult);
+
+	const FD3D12SwapChain* SwapChain = Window->GetSwapChain()->As<FD3D12SwapChain>();
+	const D3D12_RESOURCE_BARRIER Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		SwapChain->GetBackBuffer(BackBufferIndex).Get(), D3D12_RESOURCE_STATE_PRESENT,
+		D3D12_RESOURCE_STATE_RENDER_TARGET);
+	CommandList->GetNativeCommandList()->ResourceBarrier(1, &Barrier);
+
+	const D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle = SwapChain->GetBackBufferHandle(BackBufferIndex);
+	CommandList->GetNativeCommandList()->OMSetRenderTargets(1, &RTVHandle, false, nullptr);
+	constexpr float ClearColor[] = {0.0f, 0.2f, 0.4f, 1.0f};
+	CommandList->GetNativeCommandList()->ClearRenderTargetView(RTVHandle, ClearColor, 0, nullptr);
+
 	return S_OK;
 }
 
 HRESULT FD3D12GraphicsInterface::EndFrame()
 {
-	FD3D12CommandList* CommandList = Device->GetContext().CommandLists[0]->As<FD3D12CommandList>();
-	const HRESULT ListCloseResult = CommandList->Close();
+	const FD3D12CommandList* CommandList = Device->GetContext().CommandLists[BackBufferIndex]->As<FD3D12CommandList>();
+
+	const FD3D12SwapChain* SwapChain = Window->GetSwapChain()->As<FD3D12SwapChain>();
+	const D3D12_RESOURCE_BARRIER Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		SwapChain->GetBackBuffer(BackBufferIndex).Get(), D3D12_RESOURCE_STATE_PRESENT,
+		D3D12_RESOURCE_STATE_RENDER_TARGET);
+	CommandList->GetNativeCommandList()->ResourceBarrier(1, &Barrier);
+
+	const HRESULT ListCloseResult = Device->GetContext().CommandLists[BackBufferIndex]->Close();
 	SB_CHECK_RESULT(ListCloseResult);
+
+	ID3D12CommandList* const CommandLists[] = {CommandList->GetNativeCommandList().Get()};
+	Device->GetContext().CommandQueue->As<FD3D12CommandQueue>()->GetNativeCommandQueue()->ExecuteCommandLists(
+		1, CommandLists);
+
+	const HRESULT PresentResult = Window->GetSwapChain()->Present(true);
+	SB_CHECK_RESULT(PresentResult);
+
+	const HRESULT SignalResult = Device->GetContext().Fences[BackBufferIndex]->
+		Signal(Device->GetContext().CommandQueue);
+	SB_CHECK_RESULT(SignalResult);
+	const HRESULT WaitResult = Device->GetContext().Fences[BackBufferIndex]->Wait();
+	SB_CHECK_RESULT(WaitResult);
 	return S_OK;
 }
 
-HRESULT FD3D12GraphicsInterface::Initialize()
+HRESULT FD3D12GraphicsInterface::Initialize(const std::shared_ptr<FWindow> InWindow)
 {
+	Window = InWindow;
 #if SB_D3D12_ENABLE_DEBUG_LAYER
 	{
 		if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&DXGIDebug))))

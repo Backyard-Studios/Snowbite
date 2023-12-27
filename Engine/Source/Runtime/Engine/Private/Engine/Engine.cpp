@@ -70,7 +70,7 @@ HRESULT FEngine::Initialize()
 	MainWindow = std::make_shared<FWindow>(WindowDesc);
 	FWindowManager::Register(MainWindow);
 
-	const HRESULT RendererInitializeResult = FRenderer::Initialize();
+	const HRESULT RendererInitializeResult = FRenderer::Initialize(MainWindow);
 	SB_CHECK_RESULT(RendererInitializeResult, TEXT("Failed to initialize renderer."));
 	return S_OK;
 }

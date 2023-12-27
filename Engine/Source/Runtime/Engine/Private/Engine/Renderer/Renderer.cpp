@@ -5,6 +5,7 @@
 #include "Engine/Graphics/D3D12/D3D12GraphicsInterface.h"
 
 std::shared_ptr<IGraphicsInterface> FRenderer::GraphicsInterface = nullptr;
+std::shared_ptr<FWindow> FRenderer::Window = nullptr;
 
 HRESULT FRenderer::BeginFrame()
 {
@@ -20,10 +21,11 @@ HRESULT FRenderer::EndFrame()
 	return S_OK;
 }
 
-HRESULT FRenderer::Initialize()
+HRESULT FRenderer::Initialize(const std::shared_ptr<FWindow>& InWindow)
 {
+	Window = InWindow;
 	GraphicsInterface = std::make_shared<FD3D12GraphicsInterface>();
-	const HRESULT InitializeResult = GraphicsInterface->Initialize();
+	const HRESULT InitializeResult = GraphicsInterface->Initialize(Window);
 	SB_CHECK_RESULT(InitializeResult);
 	return S_OK;
 }
