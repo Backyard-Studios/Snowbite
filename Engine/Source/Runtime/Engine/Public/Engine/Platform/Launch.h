@@ -13,7 +13,7 @@
  *
  * @return	Process return code.
  */
-SNOWBITE_API uint32_t LaunchSnowbite(int ArgumentCount, char** Arguments);
+[[nodiscard]] SNOWBITE_API uint32_t LaunchSnowbite(int ArgumentCount, char** Arguments);
 
 #ifdef SB_EXECUTABLE_CONSOLE
 #	define SB_ENTRY_POINT_ARGUMENTS ArgumentCount, ArgumentArray

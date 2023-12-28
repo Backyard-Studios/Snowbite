@@ -2,7 +2,7 @@
 
 #include <Engine/Platform/Launch.h>
 
-uint32_t GuardedMain(const int ArgumentCount, char** Arguments)
+[[nodiscard]] uint32_t GuardedMain(const int ArgumentCount, char** Arguments)
 {
 	const HRESULT Result = FEngine::EntryPoint(ArgumentCount, Arguments);
 	if (FAILED(Result))

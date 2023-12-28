@@ -11,7 +11,7 @@ public:
 	 * @param ArgumentArray The array of arguments passed to the engine.
 	 * @return The exit code of the engine.
 	 */
-	static HRESULT EntryPoint(int ArgumentCount, char* ArgumentArray[]);
+	[[nodiscard]] static HRESULT EntryPoint(int ArgumentCount, char* ArgumentArray[]);
 
 	/**
 	 * @brief Requests the engine to exit.
@@ -29,13 +29,13 @@ public:
 
 private:
 #pragma region Lifecycle Functions
-	static HRESULT PreInitialize();
-	static HRESULT Initialize();
-	static HRESULT PostInitialize();
+	[[nodiscard]] static HRESULT PreInitialize();
+	[[nodiscard]] static HRESULT Initialize();
+	[[nodiscard]] static HRESULT PostInitialize();
 
 	static void EarlyUpdate();
 	static void Update();
-	static void LateUpdate();
+	[[nodiscard]] static HRESULT LateUpdate();
 
 	static void BeforeShutdown();
 	static void Shutdown();

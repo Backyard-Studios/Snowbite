@@ -23,6 +23,7 @@
 #define SB_SAFE_RESET(Pointer) if (Pointer) { (Pointer).reset(); (Pointer) = nullptr; }
 #define SB_SAFE_DESTROY(Pointer) if (Pointer) { (Pointer)->Destroy(); (Pointer).reset(); (Pointer) = nullptr; }
 
+#define SB_CHECK(Result) { const HRESULT SB_UNIQUE_NAME(ResultVariable) = (Result); if (FAILED(SB_UNIQUE_NAME(ResultVariable))) { if(IsDebuggerPresent()) { FPlatform::PrintHRESULT(SB_UNIQUE_NAME(ResultVariable)); DebugBreak(); } return SB_UNIQUE_NAME(ResultVariable); } }
 #define SB_CHECK_RESULT_LOW(Result) if (FAILED(Result)) { FPlatform::PrintHRESULT(Result); SB_DEBUG_BREAK() return Result; }
 #define SB_CHECK_RESULT(Result) if (FAILED(Result)) { SB_DEBUG_BREAK() return Result; }
 #define SB_CHECK_RESULT_FATAL(Result) if (FAILED(Result)) { FPlatform::PrintHRESULT(Result); SB_DEBUG_BREAK() FPlatform::Fatal(Result); }

@@ -12,17 +12,17 @@ FMutex::~FMutex()
 	DeleteCriticalSection(&CriticalSection);
 }
 
-void FMutex::Lock()
+void FMutex::Lock() const
 {
 	EnterCriticalSection(&CriticalSection);
 }
 
-bool FMutex::TryLock()
+bool FMutex::TryLock() const
 {
 	return TryEnterCriticalSection(&CriticalSection);
 }
 
-void FMutex::Unlock()
+void FMutex::Unlock() const
 {
 	LeaveCriticalSection(&CriticalSection);
 }

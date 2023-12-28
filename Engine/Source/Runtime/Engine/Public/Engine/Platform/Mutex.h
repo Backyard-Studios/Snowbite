@@ -17,17 +17,17 @@ public:
 	/**
 	 * Locks the mutex. If another thread has already locked the mutex, this call will block until the lock is released.
 	 */
-	void Lock();
+	void Lock() const;
 
 	/**
 	 * Tries to lock the mutex. If another thread has already locked the mutex, this call will return false immediately.
 	 * @return true if the lock was acquired, false otherwise.
 	 */
-	bool TryLock();
+	bool TryLock() const;
 	/**
 	 * Unlocks the mutex so that it can be acquired by other threads.
 	 */
-	void Unlock();
+	void Unlock() const;
 
 	FMutex& operator=(const FMutex&) = default;
 

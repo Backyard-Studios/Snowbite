@@ -38,7 +38,7 @@ HRESULT FEngine::EntryPoint(int ArgumentCount, char* ArgumentArray[])
 	{
 		SB_LIFECYCLE(EarlyUpdate)
 		SB_LIFECYCLE(Update)
-		SB_LIFECYCLE(LateUpdate)
+		SB_LIFECYCLE_WITH_RESULT(LateUpdate)
 	}
 	SB_LIFECYCLE(BeforeShutdown)
 	SB_LIFECYCLE(Shutdown)
@@ -59,8 +59,7 @@ void FEngine::Exit(const uint32_t InExitCode)
 
 HRESULT FEngine::PreInitialize()
 {
-	const HRESULT PlatformInitialize = FPlatform::Initialize(GetModuleHandle(nullptr));
-	SB_CHECK_RESULT_LOW(PlatformInitialize);
+	SB_CHECK(FPlatform::Initialize(GetModuleHandle(nullptr)));
 	return S_OK;
 }
 
@@ -72,8 +71,7 @@ HRESULT FEngine::Initialize()
 	MainWindow = std::make_shared<FWindow>(WindowDesc);
 	FWindowManager::Register(MainWindow);
 
-	const HRESULT RendererInitializeResult = FRenderer::Initialize(MainWindow);
-	SB_CHECK_RESULT(RendererInitializeResult);
+	SB_CHECK(FRenderer::Initialize(MainWindow));
 	return S_OK;
 }
 
@@ -94,13 +92,14 @@ void FEngine::Update()
 	// Update game logic and physics
 }
 
-void FEngine::LateUpdate()
+HRESULT FEngine::LateUpdate()
 {
-	FRenderer::BeginFrame();
+	SB_CHECK(FRenderer::BeginFrame());
 	{
 		// Draw
 	}
-	FRenderer::EndFrame();
+	SB_CHECK(FRenderer::EndFrame());
+	return S_OK;
 }
 
 void FEngine::BeforeShutdown()
