@@ -182,6 +182,16 @@ LONG FPlatform::SehExceptionHandler(EXCEPTION_POINTERS* ExceptionPointers)
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
+HMODULE FPlatform::LoadLibraryModule(const std::string& Path)
+{
+	return LoadLibrary(Path.c_str());
+}
+
+void FPlatform::FreeLibraryModule(const HMODULE Module)
+{
+	FreeLibrary(Module);
+}
+
 uint32_t FPlatform::CalculateDpiScale(const HMODULE ShCoreModule)
 {
 	uint32_t X = 96;

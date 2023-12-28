@@ -8,7 +8,7 @@
 class SNOWBITE_API FPlatform
 {
 public:
-	static HRESULT Initialize(HINSTANCE Instance);
+	[[nodiscard]] static HRESULT Initialize(HINSTANCE Instance);
 	static void Shutdown();
 
 	static void Fatal(HRESULT Code = E_FAIL);
@@ -16,7 +16,7 @@ public:
 
 	static void SetHighDpiAwareness(bool bIsAware);
 
-	static LONG CALLBACK SehExceptionHandler(EXCEPTION_POINTERS* ExceptionPointers);
+	[[nodiscard]] static LONG CALLBACK SehExceptionHandler(EXCEPTION_POINTERS* ExceptionPointers);
 	static void CollectCrashInfo(LPEXCEPTION_POINTERS ExceptionPointers, DWORD ThreadId);
 
 	static void PrintHRESULT(HRESULT Code, const std::source_location& Location = std::source_location::current());
@@ -28,9 +28,12 @@ public:
 	[[nodiscard]] static uint32_t GetDpiScale() { return DpiScale; }
 	[[nodiscard]] static WNDCLASSEX GetWindowClass() { return WindowClass; }
 
+	[[nodiscard]] static HMODULE LoadLibraryModule(const std::string& Path);
+	static void FreeLibraryModule(HMODULE Module);
+
 private:
-	static uint32_t CalculateDpiScale(HMODULE ShCoreModule);
-	static LRESULT CALLBACK WindowProc(HWND WindowHandle, UINT Message, WPARAM WParam, LPARAM LParam);
+	[[nodiscard]] static uint32_t CalculateDpiScale(HMODULE ShCoreModule);
+	[[nodiscard]] static LRESULT CALLBACK WindowProc(HWND WindowHandle, UINT Message, WPARAM WParam, LPARAM LParam);
 
 private:
 	static uint32_t DpiScale;
