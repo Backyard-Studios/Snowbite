@@ -7,6 +7,7 @@
 #include "Engine/Core/Types.h"
 
 #include <Windows.h>
+#include <string>
 
 class FWindow;
 

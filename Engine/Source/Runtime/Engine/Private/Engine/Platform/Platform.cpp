@@ -172,6 +172,7 @@ void FPlatform::PrintHRESULT(const HRESULT Code, const std::source_location& Loc
 	std::cout << "[Error] Failed HRESULT in file " << FileName << " at line " << Location.line() <<
 		std::endl;
 	std::cout << "[Error] Message: " << FormattedMessage;
+	std::cout.flush();
 }
 
 LONG FPlatform::SehExceptionHandler(EXCEPTION_POINTERS* ExceptionPointers)
