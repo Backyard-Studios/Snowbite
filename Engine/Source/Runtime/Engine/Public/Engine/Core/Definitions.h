@@ -1,5 +1,11 @@
 ﻿#pragma once
 
+#ifdef SB_LIBRARY_EXPORT
+#	define SNOWBITE_API __declspec(dllexport)
+#else
+#	define SNOWBITE_API __declspec(dllimport)
+#endif
+
 #define SB_UNIQUE_NAME_CONCAT_INNER(a, b) a ## b
 #define SB_UNIQUE_NAME_CONCAT(a, b) SB_UNIQUE_NAME_CONCAT_INNER(a, b)
 

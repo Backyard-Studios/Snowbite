@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-struct FFloat2
+#include <Engine/Core/Definitions.h>
+
+struct SNOWBITE_API FFloat2
 {
 	float X = 0.0f;
 	float Y = 0.0f;
@@ -11,7 +13,7 @@ struct FFloat2
 	}
 };
 
-struct FFloat3
+struct SNOWBITE_API FFloat3
 {
 	float X = 0.0f;
 	float Y = 0.0f;
@@ -23,7 +25,7 @@ struct FFloat3
 	}
 };
 
-struct FUInt2
+struct SNOWBITE_API FUInt2
 {
 	uint32_t X = 0;
 	uint32_t Y = 0;
@@ -34,7 +36,7 @@ struct FUInt2
 	}
 };
 
-struct FUInt3
+struct SNOWBITE_API FUInt3
 {
 	uint32_t X = 0;
 	uint32_t Y = 0;

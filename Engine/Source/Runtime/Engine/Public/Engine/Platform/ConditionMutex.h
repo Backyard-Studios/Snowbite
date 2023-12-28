@@ -1,10 +1,12 @@
 ﻿#pragma once
 
+#include <Engine/Core/Definitions.h>
+
 #include <Windows.h>
 
 #include <Engine/Platform/Mutex.h>
 
-class FConditionMutex
+class SNOWBITE_API FConditionMutex
 {
 public:
 	FConditionMutex();

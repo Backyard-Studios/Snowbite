@@ -1,7 +1,9 @@
 ﻿#pragma once
 
+#include <Engine/Core/Definitions.h>
+
 template <typename T>
-class IInterface
+class SNOWBITE_API IInterface
 {
 public:
 	IInterface(T* Interface) : Interface(Interface)

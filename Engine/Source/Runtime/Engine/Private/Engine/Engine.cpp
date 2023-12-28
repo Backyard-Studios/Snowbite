@@ -2,8 +2,6 @@
 
 #include <Engine/Engine.h>
 
-#include "Engine/Renderer/Renderer.h"
-
 /**
  * Calls the specified lifecycle method. Only use this macro if the lifecycle method returns a result.
  * @param Method The lifecycle method to call.
@@ -59,6 +57,8 @@ void FEngine::Exit(const uint32_t InExitCode)
 
 HRESULT FEngine::PreInitialize()
 {
+	const HRESULT PlatformInitialize = FPlatform::Initialize(GetModuleHandle(nullptr));
+	SB_CHECK_RESULT_LOW(PlatformInitialize);
 	return S_OK;
 }
 
@@ -69,9 +69,6 @@ HRESULT FEngine::Initialize()
 	WindowDesc.bShouldAutoShow = false;
 	MainWindow = std::make_shared<FWindow>(WindowDesc);
 	FWindowManager::Register(MainWindow);
-
-	const HRESULT RendererInitializeResult = FRenderer::Initialize(MainWindow);
-	SB_CHECK_RESULT(RendererInitializeResult, TEXT("Failed to initialize renderer."));
 	return S_OK;
 }
 
@@ -103,7 +100,6 @@ void FEngine::BeforeShutdown()
 
 void FEngine::Shutdown()
 {
-	FRenderer::Shutdown();
 	FWindowManager::Unregister(MainWindow);
 	MainWindow.reset();
 	MainWindow = nullptr;
@@ -111,4 +107,5 @@ void FEngine::Shutdown()
 
 void FEngine::AfterShutdown()
 {
+	FPlatform::Shutdown();
 }

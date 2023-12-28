@@ -2,9 +2,6 @@
 
 #include <Engine/Platform/Window.h>
 
-#include "Engine/Graphics/D3D12/D3D12GraphicsInterface.h"
-#include "Engine/Graphics/D3D12/D3D12SwapChain.h"
-
 FWindow::FWindow(const FWindowDesc& InDesc)
 	: Desc(InDesc)
 {
@@ -20,7 +17,7 @@ FWindow::FWindow(const FWindowDesc& InDesc)
 	                              Desc.Parent != nullptr ? Desc.Parent->GetNativeHandle() : nullptr, nullptr,
 	                              FPlatform::GetWindowClass().hInstance, this);
 	if (NativeHandle == nullptr)
-		FEngine::Exit();
+		FPlatform::Fatal();
 	if (Desc.bShouldAutoShow)
 		Show();
 }
@@ -133,8 +130,6 @@ LRESULT FWindow::WndProc(const UINT Message, const WPARAM WParam, const LPARAM L
 void FWindow::OnResize(const uint32_t Width, const uint32_t Height)
 {
 	Desc.Size = FUInt2(Width, Height);
-	if (SwapChain)
-		SwapChain->Resize(Desc.Size);
 }
 
 void FWindow::OnClose()
@@ -149,12 +144,4 @@ void FWindow::OnClose()
 void FWindow::OnPositionChanged(const uint32_t X, const uint32_t Y)
 {
 	Desc.Position = FUInt2(X, Y);
-}
-
-HRESULT FWindow::CreateSwapChain(const std::shared_ptr<IGraphicsInterface>& InGraphicsInterface)
-{
-	SwapChain = std::make_shared<FD3D12SwapChain>();
-	const HRESULT InitializeResult = SwapChain->Initialize(InGraphicsInterface, NativeHandle);
-	SB_CHECK_RESULT_LOW(InitializeResult);
-	return S_OK;
 }

@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-class FEngine
+#include <Engine/Core/Definitions.h>
+
+class SNOWBITE_API FEngine
 {
 public:
 	/**

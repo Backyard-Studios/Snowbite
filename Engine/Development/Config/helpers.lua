@@ -27,23 +27,17 @@ function sb_project(name)
 			defines {
 				'_DEBUG=1',
 				workspace_macro_prefix .. 'DEBUG=1',
-        workspace_macro_prefix .. 'RELEASE=0',
-				workspace_macro_prefix .. 'DISTRIBUTION=0',
 			}
 		filter { 'configurations:Release' }
 			optimize 'On'
 			defines {
 				'NDEBUG=1',
-        workspace_macro_prefix .. 'DEBUG=0',
 				workspace_macro_prefix .. 'RELEASE=1',
-				workspace_macro_prefix .. 'DISTRIBUTION=0',
 			}
 		filter { 'configurations:Distribution' }
 			optimize 'On'
 			defines {
 				'NDEBUG=1',
-        workspace_macro_prefix .. 'DEBUG=0',
-				workspace_macro_prefix .. 'RELEASE=0',
 				workspace_macro_prefix .. 'DISTRIBUTION=1',
 			}
 		filter { 'system:windows' }
@@ -58,40 +52,22 @@ function sb_project(name)
 			defines {
 				workspace_macro_prefix .. 'LIBRARY=1',
 				workspace_macro_prefix .. 'LIBRARY_STATIC=1',
-				workspace_macro_prefix .. 'LIBRARY_SHARED=0',
         workspace_macro_prefix .. 'LIBRARY_EXPORT=1',
-        workspace_macro_prefix .. 'EXECUTABLE=0',
-        workspace_macro_prefix .. 'EXECUTABLE_CONSOLE=0',
-        workspace_macro_prefix .. 'EXECUTABLE_WINDOWED=0',
 			}
 		filter { 'kind:SharedLib' }
 			defines {
 				workspace_macro_prefix .. 'LIBRARY=1',
-				workspace_macro_prefix .. 'LIBRARY_STATIC=0',
 				workspace_macro_prefix .. 'LIBRARY_SHARED=1',
         workspace_macro_prefix .. 'LIBRARY_EXPORT=1',
-        workspace_macro_prefix .. 'EXECUTABLE=0',
-        workspace_macro_prefix .. 'EXECUTABLE_CONSOLE=0',
-        workspace_macro_prefix .. 'EXECUTABLE_WINDOWED=0',
 			}
 		filter { 'kind:ConsoleApp' }
 			defines {
-				workspace_macro_prefix .. 'LIBRARY=0',
-				workspace_macro_prefix .. 'LIBRARY_STATIC=0',
-				workspace_macro_prefix .. 'LIBRARY_SHARED=0',
-        workspace_macro_prefix .. 'LIBRARY_EXPORT=0',
         workspace_macro_prefix .. 'EXECUTABLE=1',
         workspace_macro_prefix .. 'EXECUTABLE_CONSOLE=1',
-        workspace_macro_prefix .. 'EXECUTABLE_WINDOWED=0',
 			}
 		filter { 'kind:WindowedApp' }
 			defines {
-				workspace_macro_prefix .. 'LIBRARY=0',
-				workspace_macro_prefix .. 'LIBRARY_STATIC=0',
-				workspace_macro_prefix .. 'LIBRARY_SHARED=0',
-        workspace_macro_prefix .. 'LIBRARY_EXPORT=0',
         workspace_macro_prefix .. 'EXECUTABLE=1',
-        workspace_macro_prefix .. 'EXECUTABLE_CONSOLE=0',
         workspace_macro_prefix .. 'EXECUTABLE_WINDOWED=1',
 			}
   sb_reset_filter()
@@ -184,6 +160,11 @@ function sb_copy_dll_to_directory(directory)
       ('{COPY} ' .. build_output_directory .. '/%{prj.name}/*.pdb "' .. directory .. '"')
     }
   sb_reset_filter()
+end
+
+function sb_link_shared_library(name, include_directory)
+  sb_link_project(name, include_directory)
+  sb_copy_dll_from_project(name, build_output_directory .. '/%{prj.name}')
 end
 
 function sb_executable(name)

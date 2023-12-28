@@ -1,11 +1,13 @@
 ﻿#pragma once
 
+#include <Engine/Core/Definitions.h>
+
 #include <Windows.h>
 
 /**
  * A simple mutex class that can be used to synchronize access to data shared between threads.
  */
-class FMutex
+class SNOWBITE_API FMutex
 {
 public:
 	FMutex();
@@ -39,7 +41,7 @@ private:
  * A helper class that locks a mutex in its constructor and unlocks the mutex in its destructor.
  * @note This class should not be a pointer or member variable of a class
  */
-class FMutexGuard
+class SNOWBITE_API FMutexGuard
 {
 public:
 	FMutexGuard(const FMutex& MutexRef);

@@ -1,17 +1,16 @@
 ﻿// ReSharper disable CppClangTidyReadabilityInconsistentDeclarationParameterName
 #pragma once
 
+
+#include <Engine/Core/Definitions.h>
+
 #include "Engine/Core/Types.h"
 
 #include <Windows.h>
 
-#include "Engine/Graphics/SwapChain.h"
-
-class IGraphicsInterface;
-
 class FWindow;
 
-struct FWindowDesc
+struct SNOWBITE_API FWindowDesc
 {
 	std::string Title = "Snowbite";
 	FUInt2 Size = FUInt2(1280, 720);
@@ -28,7 +27,7 @@ struct FWindowDesc
 	std::shared_ptr<FWindow> Parent = nullptr;
 };
 
-class FWindow
+class SNOWBITE_API FWindow
 {
 public:
 	FWindow(const FWindowDesc& InDesc);
@@ -53,7 +52,6 @@ public:
 	[[nodiscard]] FWindowDesc GetDesc() const { return Desc; }
 	[[nodiscard]] HWND GetNativeHandle() const { return NativeHandle; }
 	[[nodiscard]] bool IsClosed() const { return bIsClosed; }
-	[[nodiscard]] std::shared_ptr<ISwapChain> GetSwapChain() const { return SwapChain; }
 
 	[[nodiscard]] FUInt2 GetSize() const { return Desc.Size; }
 	[[nodiscard]] FUInt2 GetPosition() const { return Desc.Position; }
@@ -71,15 +69,11 @@ private:
 	void OnClose();
 	void OnPositionChanged(uint32_t X, uint32_t Y);
 
-	HRESULT CreateSwapChain(const std::shared_ptr<IGraphicsInterface>& InGraphicsInterface);
-
 private:
 	FWindowDesc Desc;
 
 	HWND NativeHandle;
 	bool bIsClosed = false;
-
-	std::shared_ptr<ISwapChain> SwapChain;
 
 	friend class FPlatform;
 };

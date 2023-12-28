@@ -1,9 +1,11 @@
 ﻿#pragma once
 
+#include <Engine/Core/Definitions.h>
+
 #include <cstdint>
 #include <source_location>
 
-class FPlatform
+class SNOWBITE_API FPlatform
 {
 public:
 	static HRESULT Initialize(HINSTANCE Instance);

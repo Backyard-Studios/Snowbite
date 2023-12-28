@@ -1,11 +1,13 @@
 ﻿#pragma once
 
+#include <Engine/Core/Definitions.h>
+
 #include <vector>
 
 #include "Mutex.h"
 #include "Window.h"
 
-class FWindowManager
+class SNOWBITE_API FWindowManager
 {
 public:
 	static bool IsRegistered(const std::shared_ptr<FWindow>& Window);
