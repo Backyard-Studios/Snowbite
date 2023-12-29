@@ -209,25 +209,26 @@ HRESULT FRenderer::EndFrame()
 	SB_CHECK(CommandQueue->Signal(FrameContext.Fence.Get(), FrameContext.FenceValue));
 	// Not waiting for the fence to complete, because we're going to wait for it when the frame is used again.
 	// This is better for performance, because we don't have to wait for the GPU to finish the current frame which
-	// will be used again in 2 iterations. 
+	// will not be used again for 2 iterations. While this frame executes, we can start recording and executing the next frame.
 	return S_OK;
 }
 
-HRESULT FRenderer::WaitForFence(const ComPtr<ID3D12Fence1>& Fence, uint64_t FenceValue, const HANDLE FenceEvent)
+HRESULT FRenderer::SignalAndWaitForFence(const ComPtr<ID3D12Fence1>& Fence, uint64_t& FenceValue,
+                                         const HANDLE FenceEvent)
 {
-	FenceValue++;
 	SB_CHECK(Fence->SetEventOnCompletion(FenceValue, FenceEvent));
 	SB_CHECK(CommandQueue->Signal(Fence.Get(), FenceValue));
 	const DWORD WaitResult = WaitForSingleObject(FenceEvent, 20000);
 	if (WaitResult != WAIT_OBJECT_0)
 		return DXGI_ERROR_WAIT_TIMEOUT;
+	FenceValue++;
 	return S_OK;
 }
 
 HRESULT FRenderer::WaitForFrame(const uint32_t Index)
 {
-	const FFrameContext& FrameContext = FrameContexts[Index];
-	return WaitForFence(FrameContext.Fence, FrameContext.FenceValue, FrameContext.FenceEvent);
+	FFrameContext& FrameContext = FrameContexts[Index];
+	return SignalAndWaitForFence(FrameContext.Fence, FrameContext.FenceValue, FrameContext.FenceEvent);
 }
 
 HRESULT FRenderer::FlushFrames()

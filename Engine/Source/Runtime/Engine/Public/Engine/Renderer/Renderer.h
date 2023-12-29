@@ -27,8 +27,8 @@ private:
 	[[nodiscard]] static HRESULT BeginFrame();
 	[[nodiscard]] static HRESULT EndFrame();
 
-	[[nodiscard]] static HRESULT WaitForFence(const ComPtr<ID3D12Fence1>& Fence, uint64_t FenceValue,
-	                                          HANDLE FenceEvent);
+	[[nodiscard]] static HRESULT SignalAndWaitForFence(const ComPtr<ID3D12Fence1>& Fence, uint64_t& FenceValue,
+	                                                   HANDLE FenceEvent);
 	[[nodiscard]] static HRESULT WaitForFrame(uint32_t Index);
 	[[nodiscard]] static HRESULT FlushFrames();
 
