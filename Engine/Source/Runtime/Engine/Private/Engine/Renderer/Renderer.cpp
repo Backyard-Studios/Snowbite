@@ -15,6 +15,7 @@ ComPtr<ID3D12CommandQueue> FRenderer::CommandQueue = nullptr;
 std::shared_ptr<FSwapChain> FRenderer::SwapChain = nullptr;
 std::array<FFrameContext, FRenderer::BufferCount> FRenderer::FrameContexts;
 uint32_t FRenderer::CurrentFrameIndex = 0;
+bool FRenderer::bIsResizing = false;
 
 HRESULT FRenderer::Initialize(const std::shared_ptr<FWindow>& InWindow)
 {
@@ -61,9 +62,9 @@ HRESULT FRenderer::Initialize(const std::shared_ptr<FWindow>& InWindow)
 		SB_CHECK(
 			Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&FrameContexts[Index].
 				CommandAllocator)));
+		SB_CHECK(FrameContexts[Index].CommandAllocator->Reset());
 		SB_CHECK(Device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE,
 			IID_PPV_ARGS(&FrameContexts[Index].CommandList)));
-		SB_CHECK(FrameContexts[Index].CommandList->Close());
 		SB_CHECK(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&FrameContexts[Index].Fence)));
 		FrameContexts[Index].FenceValue = 0;
 		FrameContexts[Index].FenceEvent = CreateEvent(nullptr, false, false, nullptr);
@@ -94,8 +95,10 @@ void FRenderer::Shutdown()
 
 HRESULT FRenderer::Resize(const uint32_t Width, const uint32_t Height)
 {
+	bIsResizing = true;
 	SB_CHECK(FlushFrames());
 	SB_CHECK(SwapChain->Resize(Width, Height));
+	bIsResizing = false;
 	return S_OK;
 }
 
@@ -162,21 +165,51 @@ HRESULT FRenderer::InitializeSDK(ComPtr<ID3D12SDKConfiguration1>& SDKConfig, Com
 
 HRESULT FRenderer::BeginFrame()
 {
-	const FFrameContext& FrameContext = FrameContexts[CurrentFrameIndex];
+	if (bIsResizing)
+		return S_OK;
+	CurrentFrameIndex = SwapChain->GetBackBufferIndex();
+	FFrameContext& FrameContext = FrameContexts[CurrentFrameIndex];
+	if (FrameContext.Fence->GetCompletedValue() < FrameContext.FenceValue)
+	{
+		SB_CHECK(FrameContext.Fence->SetEventOnCompletion(FrameContext.FenceValue, FrameContext.FenceEvent));
+		const DWORD WaitResult = WaitForSingleObject(FrameContext.FenceEvent, 20000);
+		if (WaitResult != WAIT_OBJECT_0)
+			return DXGI_ERROR_WAIT_TIMEOUT;
+	}
+	FrameContext.FenceValue++;
+	const ComPtr<ID3D12GraphicsCommandList9> CommandList = FrameContext.CommandList;
 	SB_CHECK(FrameContext.CommandAllocator->Reset());
-	SB_CHECK(FrameContext.CommandList->Reset(FrameContext.CommandAllocator.Get(), nullptr));
+	SB_CHECK(CommandList->Reset(FrameContext.CommandAllocator.Get(), nullptr));
+
+	SwapChain->TransitionBackBuffersToRenderTarget(CommandList);
+
+	const D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle = SwapChain->GetCurrentBackBufferHandle();
+	CommandList->OMSetRenderTargets(1, &RTVHandle, false, nullptr);
+	constexpr float ClearColor[] = {0.08f, 0.08f, 0.08f, 1.0f};
+	CommandList->ClearRenderTargetView(RTVHandle, ClearColor, 0, nullptr);
 	return S_OK;
 }
 
 HRESULT FRenderer::EndFrame()
 {
+	if (bIsResizing)
+		return S_OK;
 	const FFrameContext& FrameContext = FrameContexts[CurrentFrameIndex];
-	SB_CHECK(FrameContext.CommandList->Close());
+	const ComPtr<ID3D12GraphicsCommandList9> CommandList = FrameContext.CommandList;
 
-	ID3D12CommandList* CommandLists[] = {FrameContext.CommandList.Get()};
+	SwapChain->TransitionBackBuffersToPresent(CommandList);
+
+	SB_CHECK(CommandList->Close());
+
+	ID3D12CommandList* CommandLists[] = {CommandList.Get()};
 	CommandQueue->ExecuteCommandLists(1, CommandLists);
 
 	SB_CHECK(SwapChain->Present(true));
+
+	SB_CHECK(CommandQueue->Signal(FrameContext.Fence.Get(), FrameContext.FenceValue));
+	// Not waiting for the fence to complete, because we're going to wait for it when the frame is used again.
+	// This is better for performance, because we don't have to wait for the GPU to finish the current frame which
+	// will be used again in 2 iterations. 
 	return S_OK;
 }
 

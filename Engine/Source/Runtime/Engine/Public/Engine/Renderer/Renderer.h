@@ -47,6 +47,7 @@ private:
 
 	static constexpr uint32_t BufferCount = 3;
 	static uint32_t CurrentFrameIndex;
+	static bool bIsResizing;
 
 #ifdef SB_DEBUG
 	static ComPtr<IDXGIDebug1> DXGIDebug;
