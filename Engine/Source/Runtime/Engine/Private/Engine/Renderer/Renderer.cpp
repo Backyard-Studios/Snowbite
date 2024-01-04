@@ -10,8 +10,8 @@ std::shared_ptr<FWindow> FRenderer::Window = nullptr;
 ComPtr<IDXGIDebug1> FRenderer::DXGIDebug = nullptr;
 #endif
 ComPtr<IDXGIFactory7> FRenderer::Factory = nullptr;
-ComPtr<ID3D12Device13> FRenderer::Device = nullptr;
-ComPtr<ID3D12CommandQueue> FRenderer::CommandQueue = nullptr;
+std::shared_ptr<FD3D12Device> FRenderer::Device = nullptr;
+std::shared_ptr<FD3D12CommandQueue> FRenderer::CommandQueue = nullptr;
 std::shared_ptr<FSwapChain> FRenderer::SwapChain = nullptr;
 std::array<FFrameContext, FRenderer::BufferCount> FRenderer::FrameContexts;
 uint32_t FRenderer::CurrentFrameIndex = 0;
@@ -31,28 +31,27 @@ HRESULT FRenderer::Initialize(const std::shared_ptr<FWindow>& InWindow)
 
 	ComPtr<IDXGIAdapter4> TempAdapter;
 	SB_CHECK(ChooseAdapter(DeviceFactory, TempAdapter));
-	SB_CHECK(DeviceFactory->CreateDevice(TempAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&Device)));
+	Device = std::make_shared<FD3D12Device>(Factory);
+	SB_CHECK(Device->Initialize(TempAdapter, DeviceFactory));
 	DeviceFactory.Reset();
 	SDKConfig->FreeUnusedSDKs();
 	SDKConfig.Reset();
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS12 FeatureOptions;
-	SB_CHECK(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &FeatureOptions, sizeof(FeatureOptions)));
+	SB_CHECK(
+		Device->GetD3D12Device()->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &FeatureOptions, sizeof(
+			FeatureOptions)));
 	if (!FeatureOptions.EnhancedBarriersSupported)
 		FPlatform::Fatal("Enhanced barriers not supported");
 
-	D3D12_COMMAND_QUEUE_DESC CommandQueueDesc;
-	CommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-	CommandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
-	CommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	CommandQueueDesc.NodeMask = 0;
-	SB_CHECK(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&CommandQueue)));
+	CommandQueue = std::make_shared<FD3D12CommandQueue>(Device);
+	SB_CHECK(CommandQueue->Initialize(D3D12_COMMAND_LIST_TYPE_DIRECT));
 
 	FSwapChainDesc SwapChainDesc;
 	SwapChainDesc.BufferCount = BufferCount;
 	SwapChainDesc.Factory = Factory;
-	SwapChainDesc.Device = Device;
-	SwapChainDesc.CommandQueue = CommandQueue;
+	SwapChainDesc.Device = Device->GetD3D12Device();
+	SwapChainDesc.CommandQueue = CommandQueue->GetD3D12CommandQueue();
 	SwapChainDesc.Window = Window;
 	SwapChain = std::make_shared<FSwapChain>();
 	SB_CHECK(SwapChain->Initialize(SwapChainDesc));
@@ -60,14 +59,16 @@ HRESULT FRenderer::Initialize(const std::shared_ptr<FWindow>& InWindow)
 	for (uint32_t Index = 0; Index < BufferCount; ++Index)
 	{
 		SB_CHECK(
-			Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&FrameContexts[Index].
+			Device->GetD3D12Device()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&
+				FrameContexts[Index].
 				CommandAllocator)));
 		SB_CHECK(FrameContexts[Index].CommandAllocator->Reset());
-		SB_CHECK(Device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE,
-			IID_PPV_ARGS(&FrameContexts[Index].CommandList)));
-		SB_CHECK(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&FrameContexts[Index].Fence)));
-		FrameContexts[Index].FenceValue = 0;
-		FrameContexts[Index].FenceEvent = CreateEvent(nullptr, false, false, nullptr);
+		SB_CHECK(
+			Device->GetD3D12Device()->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+				D3D12_COMMAND_LIST_FLAG_NONE,
+				IID_PPV_ARGS(&FrameContexts[Index].CommandList)));
+		FrameContexts[Index].TempFence = std::make_shared<FD3D12Fence>(Device);
+		SB_CHECK(FrameContexts[Index].TempFence->Initialize());
 	}
 	return S_OK;
 }
@@ -76,10 +77,19 @@ void FRenderer::Shutdown()
 {
 	const HRESULT FlushResult = FlushFrames();
 	if (FAILED(FlushResult))
+	{
+		FPlatform::PrintHRESULT(FlushResult);
 		std::cout << "Failed to flush frames" << std::endl;
+	}
+	for (FFrameContext& FrameContext : FrameContexts)
+	{
+		FrameContext.CommandAllocator.Reset();
+		FrameContext.CommandList.Reset();
+		FrameContext.TempFence.reset();
+	}
 	SB_SAFE_DESTROY(SwapChain);
-	CommandQueue.Reset();
-	Device.Reset();
+	SB_SAFE_DESTROY(CommandQueue);
+	SB_SAFE_DESTROY(Device);
 	Factory.Reset();
 #ifdef SB_DEBUG
 	if (DXGIDebug)
@@ -168,15 +178,14 @@ HRESULT FRenderer::BeginFrame()
 	if (bIsResizing)
 		return S_OK;
 	CurrentFrameIndex = SwapChain->GetBackBufferIndex();
-	FFrameContext& FrameContext = FrameContexts[CurrentFrameIndex];
-	if (FrameContext.Fence->GetCompletedValue() < FrameContext.FenceValue)
+	const FFrameContext& FrameContext = FrameContexts[CurrentFrameIndex];
+
+	if (!FrameContext.TempFence->IsCompleted())
 	{
-		SB_CHECK(FrameContext.Fence->SetEventOnCompletion(FrameContext.FenceValue, FrameContext.FenceEvent));
-		const DWORD WaitResult = WaitForSingleObject(FrameContext.FenceEvent, 20000);
-		if (WaitResult != WAIT_OBJECT_0)
-			return DXGI_ERROR_WAIT_TIMEOUT;
+		SB_CHECK(FrameContext.TempFence->Wait());
 	}
-	FrameContext.FenceValue++;
+	FrameContext.TempFence->IncrementValue();
+
 	const ComPtr<ID3D12GraphicsCommandList9> CommandList = FrameContext.CommandList;
 	SB_CHECK(FrameContext.CommandAllocator->Reset());
 	SB_CHECK(CommandList->Reset(FrameContext.CommandAllocator.Get(), nullptr));
@@ -206,29 +215,23 @@ HRESULT FRenderer::EndFrame()
 
 	SB_CHECK(SwapChain->Present(true));
 
-	SB_CHECK(CommandQueue->Signal(FrameContext.Fence.Get(), FrameContext.FenceValue));
+	SB_CHECK(CommandQueue->Signal(FrameContext.TempFence));
 	// Not waiting for the fence to complete, because we're going to wait for it when the frame is used again.
 	// This is better for performance, because we don't have to wait for the GPU to finish the current frame which
 	// will not be used again for 2 iterations. While this frame executes, we can start recording and executing the next frame.
 	return S_OK;
 }
 
-HRESULT FRenderer::SignalAndWaitForFence(const ComPtr<ID3D12Fence1>& Fence, uint64_t& FenceValue,
-                                         const HANDLE FenceEvent)
+HRESULT FRenderer::SignalAndWaitForFence(const std::shared_ptr<FD3D12Fence>& Fence)
 {
-	SB_CHECK(Fence->SetEventOnCompletion(FenceValue, FenceEvent));
-	SB_CHECK(CommandQueue->Signal(Fence.Get(), FenceValue));
-	const DWORD WaitResult = WaitForSingleObject(FenceEvent, 20000);
-	if (WaitResult != WAIT_OBJECT_0)
-		return DXGI_ERROR_WAIT_TIMEOUT;
-	FenceValue++;
+	SB_CHECK(CommandQueue->Signal(Fence));
+	SB_CHECK(Fence->Wait());
 	return S_OK;
 }
 
 HRESULT FRenderer::WaitForFrame(const uint32_t Index)
 {
-	FFrameContext& FrameContext = FrameContexts[Index];
-	return SignalAndWaitForFence(FrameContext.Fence, FrameContext.FenceValue, FrameContext.FenceEvent);
+	return SignalAndWaitForFence(FrameContexts[Index].TempFence);
 }
 
 HRESULT FRenderer::FlushFrames()

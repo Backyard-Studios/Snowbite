@@ -3,15 +3,14 @@
 #include <Engine/Core/Definitions.h>
 #include <Engine/Renderer/D3D12Include.h>
 
+#include "D3D12CommandQueue.h"
 #include "SwapChain.h"
 
 struct SNOWBITE_API FFrameContext
 {
 	ComPtr<ID3D12CommandAllocator> CommandAllocator;
 	ComPtr<ID3D12GraphicsCommandList9> CommandList;
-	ComPtr<ID3D12Fence1> Fence;
-	uint64_t FenceValue;
-	HANDLE FenceEvent;
+	std::shared_ptr<FD3D12Fence> TempFence;
 };
 
 class SNOWBITE_API FRenderer
@@ -27,8 +26,7 @@ private:
 	[[nodiscard]] static HRESULT BeginFrame();
 	[[nodiscard]] static HRESULT EndFrame();
 
-	[[nodiscard]] static HRESULT SignalAndWaitForFence(const ComPtr<ID3D12Fence1>& Fence, uint64_t& FenceValue,
-	                                                   HANDLE FenceEvent);
+	[[nodiscard]] static HRESULT SignalAndWaitForFence(const std::shared_ptr<FD3D12Fence>& Fence);
 	[[nodiscard]] static HRESULT WaitForFrame(uint32_t Index);
 	[[nodiscard]] static HRESULT FlushFrames();
 
@@ -53,8 +51,8 @@ private:
 	static ComPtr<IDXGIDebug1> DXGIDebug;
 #endif
 	static ComPtr<IDXGIFactory7> Factory;
-	static ComPtr<ID3D12Device13> Device;
-	static ComPtr<ID3D12CommandQueue> CommandQueue;
+	static std::shared_ptr<FD3D12Device> Device;
+	static std::shared_ptr<FD3D12CommandQueue> CommandQueue;
 
 	static std::shared_ptr<FSwapChain> SwapChain;
 	static std::array<FFrameContext, BufferCount> FrameContexts;

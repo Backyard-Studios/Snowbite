@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <span>
 #include <memory>
 
 #include <Windows.h>
