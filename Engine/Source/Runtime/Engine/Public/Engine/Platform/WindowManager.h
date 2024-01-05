@@ -10,8 +10,8 @@
 class SNOWBITE_API FWindowManager
 {
 public:
-	static bool IsRegistered(const std::shared_ptr<FWindow>& Window);
-	static bool IsRegistered(HWND WindowHandle);
+	[[nodiscard]] static bool IsRegistered(const std::shared_ptr<FWindow>& Window);
+	[[nodiscard]] static bool IsRegistered(HWND WindowHandle);
 	static void Register(const std::shared_ptr<FWindow>& Window);
 	static void Unregister(const std::shared_ptr<FWindow>& Window);
 	static void Unregister(HWND WindowHandle);

@@ -19,7 +19,7 @@ public:
 	 * @param WaitTime The time to wait for the condition variable to be notified.
 	 * @return true if the condition variable was notified, false if the wait timed out.
 	 */
-	bool Wait(const FMutex& Mutex, DWORD WaitTime = INFINITE);
+	[[nodiscard]] bool Wait(const FMutex& Mutex, DWORD WaitTime = INFINITE);
 
 	/**
 	 * Notifies one waiting thread.

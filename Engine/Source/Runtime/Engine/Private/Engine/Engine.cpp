@@ -52,7 +52,8 @@ void FEngine::RequestExit(const uint32_t InExitCode)
 
 void FEngine::Exit(const uint32_t InExitCode)
 {
-	std::exit(InExitCode);
+	ExitCode = InExitCode;
+	FPlatform::Fatal();
 }
 
 HRESULT FEngine::PreInitialize()

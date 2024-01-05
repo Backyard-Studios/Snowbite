@@ -21,9 +21,14 @@ public:
 
 	static void PrintHRESULT(HRESULT Code, const std::source_location& Location = std::source_location::current());
 
-	static bool IsMainThread() { return MainThreadId == GetCurrentThreadId(); }
-	static bool IsMainThread(const HANDLE ThreadHandle) { return MainThreadId == GetThreadId(ThreadHandle); }
-	static bool IsMainThread(const DWORD ThreadId) { return MainThreadId == ThreadId; }
+	[[nodiscard]] static bool IsMainThread() { return MainThreadId == GetCurrentThreadId(); }
+
+	[[nodiscard]] static bool IsMainThread(const HANDLE ThreadHandle)
+	{
+		return MainThreadId == GetThreadId(ThreadHandle);
+	}
+
+	[[nodiscard]] static bool IsMainThread(const DWORD ThreadId) { return MainThreadId == ThreadId; }
 
 	[[nodiscard]] static uint32_t GetDpiScale() { return DpiScale; }
 	[[nodiscard]] static WNDCLASSEX GetWindowClass() { return WindowClass; }

@@ -65,7 +65,7 @@ public:
 	[[nodiscard]] bool IsMaximized() const { return IsZoomed(NativeHandle); }
 
 private:
-	LRESULT WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
+	[[nodiscard]] LRESULT WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
 	void OnResize(uint32_t Width, uint32_t Height);
 	void OnClose();
 	void OnPositionChanged(uint32_t X, uint32_t Y);

@@ -23,7 +23,7 @@ public:
 	 * Tries to lock the mutex. If another thread has already locked the mutex, this call will return false immediately.
 	 * @return true if the lock was acquired, false otherwise.
 	 */
-	bool TryLock() const;
+	[[nodiscard]] bool TryLock() const;
 	/**
 	 * Unlocks the mutex so that it can be acquired by other threads.
 	 */

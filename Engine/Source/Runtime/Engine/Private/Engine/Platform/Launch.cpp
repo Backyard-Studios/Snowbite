@@ -16,6 +16,8 @@
 uint32_t LaunchSnowbite(const int ArgumentCount, char** Arguments)
 {
 	uint32_t ExitCode = EXIT_SUCCESS;
+	if (FAILED(FLogging::Initialize()))
+		return EXIT_FAILURE;
 	__try
 	{
 		ExitCode = GuardedMain(ArgumentCount, Arguments);
@@ -24,5 +26,6 @@ uint32_t LaunchSnowbite(const int ArgumentCount, char** Arguments)
 	{
 		(void)0;
 	}
+	FLogging::Shutdown();
 	return ExitCode;
 }
