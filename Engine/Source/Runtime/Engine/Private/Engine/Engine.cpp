@@ -2,8 +2,6 @@
 
 #include <Engine/Engine.h>
 
-#include "Engine/Renderer/Renderer.h"
-
 /**
  * Calls the specified lifecycle method. Only use this macro if the lifecycle method returns a result.
  * @param Method The lifecycle method to call.
@@ -70,8 +68,6 @@ HRESULT FEngine::Initialize()
 	WindowDesc.bShouldAutoShow = false;
 	MainWindow = std::make_shared<FWindow>(WindowDesc);
 	FWindowManager::Register(MainWindow);
-
-	SB_CHECK(FRenderer::Initialize(MainWindow));
 	return S_OK;
 }
 
@@ -94,11 +90,6 @@ void FEngine::Update()
 
 HRESULT FEngine::LateUpdate()
 {
-	SB_CHECK(FRenderer::BeginFrame());
-	{
-		// Draw
-	}
-	SB_CHECK(FRenderer::EndFrame());
 	return S_OK;
 }
 
@@ -108,7 +99,6 @@ void FEngine::BeforeShutdown()
 
 void FEngine::Shutdown()
 {
-	FRenderer::Shutdown();
 	FWindowManager::Unregister(MainWindow);
 	MainWindow.reset();
 	MainWindow = nullptr;
