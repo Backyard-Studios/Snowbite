@@ -2,6 +2,9 @@
 
 #include <Engine/Engine.h>
 
+#include "Engine/Renderer/GraphicsDevice.h"
+#include "Engine/Renderer/Renderer.h"
+
 /**
  * Calls the specified lifecycle method. Only use this macro if the lifecycle method returns a result.
  * @param Method The lifecycle method to call.
@@ -36,7 +39,7 @@ HRESULT FEngine::EntryPoint(int ArgumentCount, char* ArgumentArray[])
 	SB_LIFECYCLE_WITH_RESULT(PostInitialize)
 	while (!bShouldExit)
 	{
-		SB_LIFECYCLE(EarlyUpdate)
+		SB_LIFECYCLE_WITH_RESULT(EarlyUpdate)
 		SB_LIFECYCLE(Update)
 		SB_LIFECYCLE_WITH_RESULT(LateUpdate)
 	}
@@ -71,6 +74,8 @@ HRESULT FEngine::Initialize()
 	WindowDesc.bShouldAutoShow = false;
 	MainWindow = std::make_shared<FWindow>(WindowDesc);
 	FWindowManager::Register(MainWindow);
+
+	SB_CHECK(FRenderer::Initialize(MainWindow));
 	return S_OK;
 }
 
@@ -80,10 +85,16 @@ HRESULT FEngine::PostInitialize()
 	return S_OK;
 }
 
-void FEngine::EarlyUpdate()
+HRESULT FEngine::EarlyUpdate()
 {
 	// Handle messages and input
 	FWindowManager::HandleWindowMessages();
+	if (MainWindow->WasResized())
+	{
+		SB_CHECK(FRenderer::Resize(MainWindow->GetSize().X, MainWindow->GetSize().Y));
+		MainWindow->ClearResizeFlag();
+	}
+	return S_OK;
 }
 
 void FEngine::Update()
@@ -93,6 +104,11 @@ void FEngine::Update()
 
 HRESULT FEngine::LateUpdate()
 {
+	SB_CHECK(FRenderer::BeginFrame());
+	{
+		// Draw scene
+	}
+	SB_CHECK(FRenderer::EndFrame())
 	return S_OK;
 }
 
@@ -102,6 +118,7 @@ void FEngine::BeforeShutdown()
 
 void FEngine::Shutdown()
 {
+	FRenderer::Shutdown();
 	FWindowManager::Unregister(MainWindow);
 	MainWindow.reset();
 	MainWindow = nullptr;

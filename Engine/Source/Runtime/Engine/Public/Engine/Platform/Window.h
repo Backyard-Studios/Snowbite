@@ -48,11 +48,15 @@ public:
 	void SetFullscreen(bool bShouldFullscreen);
 	void SetSize(const FUInt2& InSize) const;
 	void SetPosition(const FUInt2& InPosition) const;
-	void SetTitle(const std::string& InTitle) const;
+	void SetTitle(const std::string& InTitle);
+	void AppendTitle(const std::string& InTitle);
+
+	void ClearResizeFlag();
 
 	[[nodiscard]] FWindowDesc GetDesc() const { return Desc; }
 	[[nodiscard]] HWND GetNativeHandle() const { return NativeHandle; }
 	[[nodiscard]] bool IsClosed() const { return bIsClosed; }
+	[[nodiscard]] bool WasResized() const { return bWasResized; }
 
 	[[nodiscard]] FUInt2 GetSize() const { return Desc.Size; }
 	[[nodiscard]] FUInt2 GetPosition() const { return Desc.Position; }
@@ -75,6 +79,7 @@ private:
 
 	HWND NativeHandle;
 	bool bIsClosed = false;
+	bool bWasResized = false;
 
 	friend class FPlatform;
 };

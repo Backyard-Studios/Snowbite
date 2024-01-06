@@ -33,7 +33,7 @@ private:
 	[[nodiscard]] static HRESULT Initialize();
 	[[nodiscard]] static HRESULT PostInitialize();
 
-	static void EarlyUpdate();
+	[[nodiscard]] static HRESULT EarlyUpdate();
 	static void Update();
 	[[nodiscard]] static HRESULT LateUpdate();
 

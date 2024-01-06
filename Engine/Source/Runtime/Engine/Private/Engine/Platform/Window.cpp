@@ -94,9 +94,21 @@ void FWindow::SetPosition(const FUInt2& InPosition) const
 	SetWindowPos(NativeHandle, nullptr, InPosition.X, InPosition.Y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 }
 
-void FWindow::SetTitle(const std::string& InTitle) const
+void FWindow::SetTitle(const std::string& InTitle)
 {
-	SetWindowText(NativeHandle, InTitle.c_str());
+	Desc.Title = InTitle;
+	SetWindowText(NativeHandle, Desc.Title.c_str());
+}
+
+void FWindow::AppendTitle(const std::string& InTitle)
+{
+	Desc.Title = Desc.Title + InTitle;
+	SetWindowText(NativeHandle, Desc.Title.c_str());
+}
+
+void FWindow::ClearResizeFlag()
+{
+	bWasResized = false;
 }
 
 LRESULT FWindow::WndProc(const UINT Message, const WPARAM WParam, const LPARAM LParam)
@@ -131,6 +143,7 @@ LRESULT FWindow::WndProc(const UINT Message, const WPARAM WParam, const LPARAM L
 void FWindow::OnResize(const uint32_t Width, const uint32_t Height)
 {
 	Desc.Size = FUInt2(Width, Height);
+	bWasResized = true;
 }
 
 void FWindow::OnClose()

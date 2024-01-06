@@ -23,3 +23,5 @@
 #include <Engine/Platform/Window.h>
 #include <Engine/Platform/WindowManager.h>
 #include <Engine/Engine.h>
+
+#include <Engine/Renderer/D3D12Include.h>

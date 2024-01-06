@@ -18,5 +18,4 @@ sb_shared_library('Engine')
 
   postbuildcommands {
     ('{COPY} "' .. third_party_directory .. '/AgilitySDK/bin/x64/*.dll" "' .. build_output_directory .. '/Editor/D3D12"'),
-    ('{COPY} "' .. third_party_directory .. '/AgilitySDK/bin/x64/*.dll" "' .. build_output_directory .. '/Engine/D3D12"'),
   }
