@@ -15,7 +15,9 @@
 #include <Engine/Core/Definitions.h>
 #include <Engine/Core/Types.h>
 #include <Engine/Core/Results.h>
+#include <Engine/Core/StringUtil.h>
 #include <Engine/Core/Logging.h>
+#include <Engine/Core/Identifier.h>
 #include <Engine/Platform/Platform.h>
 #include <Engine/Platform/Mutex.h>
 #include <Engine/Platform/Window.h>
