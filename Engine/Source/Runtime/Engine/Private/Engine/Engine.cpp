@@ -29,6 +29,8 @@ std::shared_ptr<FWindow> FEngine::MainWindow;
 
 HRESULT FEngine::EntryPoint(int ArgumentCount, char* ArgumentArray[])
 {
+	SB_LOG_INFO("Snowbite v{}.{}.{}-{}", SNOWBITE_VERSION_MAJOR, SNOWBITE_VERSION_MINOR, SNOWBITE_VERSION_PATCH,
+	            SNOWBITE_VERSION_BRANCH);
 	SB_LIFECYCLE_WITH_RESULT(PreInitialize)
 	SB_LIFECYCLE_WITH_RESULT(Initialize)
 	SB_LIFECYCLE_WITH_RESULT(PostInitialize)

@@ -8,3 +8,4 @@ group 'Engine'
   include 'Projects/engine.lua'
 
 group 'ThirdParty'
+  include 'Projects/spdlog.lua'

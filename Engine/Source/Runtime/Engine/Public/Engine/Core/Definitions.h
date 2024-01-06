@@ -1,5 +1,19 @@
 ﻿#pragma once
 
+#define SB_MAKE_VERSION(major, minor, patch) \
+	((((uint32_t)(major)) << 22U) | (((uint32_t)(minor)) << 12U) | ((uint32_t)(patch)))
+#define SB_VERSION_MAJOR(version) ((uint32_t)(version) >> 22U)
+#define SB_VERSION_MINOR(version) (((uint32_t)(version) >> 12U) & 0x3FFU)
+#define SB_VERSION_PATCH(version) ((uint32_t)(version) & 0xFFFU)
+
+// ReSharper disable CppClangTidyModernizeMacroToEnum
+#define SNOWBITE_VERSION_MAJOR 0
+#define SNOWBITE_VERSION_MINOR 0
+#define SNOWBITE_VERSION_PATCH 0
+#define SNOWBITE_VERSION_BRANCH "dev"
+#define SNOWBITE_VERSION SB_MAKE_VERSION(SNOWBITE_VERSION_MAJOR, SNOWBITE_VERSION_MINOR, SNOWBITE_VERSION_PATCH)
+// ReSharper enable CppClangTidyModernizeMacroToEnum
+
 #ifdef SB_LIBRARY_EXPORT
 #	define SNOWBITE_API __declspec(dllexport)
 #else

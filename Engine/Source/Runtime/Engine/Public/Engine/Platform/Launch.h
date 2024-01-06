@@ -1,6 +1,9 @@
 ﻿#pragma once
 
 #include <Engine/Core/Definitions.h>
+
+// ReSharper disable once CppUnusedIncludeDirective
+#include <Engine/Core/Logging.h>
 #include <cstdint>
 
 /**
@@ -34,5 +37,8 @@
 #define LAUNCH_SNOWBITE() \
 	SB_ENTRY_POINT_HEADER \
 	{ \
-		return LaunchSnowbite(SB_ENTRY_POINT_ARGUMENTS); \
+		FLogging::Initialize(); \
+		uint32_t ExitCode = LaunchSnowbite(SB_ENTRY_POINT_ARGUMENTS); \
+		FLogging::Shutdown(); \
+		return ExitCode; \
 	}

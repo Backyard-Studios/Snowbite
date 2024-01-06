@@ -93,7 +93,10 @@ void FPlatform::CollectCrashInfo(const LPEXCEPTION_POINTERS ExceptionPointers,
 		const HRESULT Code = static_cast<HRESULT>(ExceptionPointers->ExceptionRecord->ExceptionInformation[1]);
 		std::string ErrorMessage = "Fatal error occurred! Creating Crash Dump!";
 		if (Message != nullptr && strlen(Message) > 0)
+		{
 			ErrorMessage += "\n\n" + std::string(Message) + "\n";
+			SB_LOG_ERROR("{}", Message);
+		}
 		else
 		{
 			LPSTR FormatErrorMessage = nullptr;
@@ -103,6 +106,7 @@ void FPlatform::CollectCrashInfo(const LPEXCEPTION_POINTERS ExceptionPointers,
 			                                   reinterpret_cast<LPSTR>(&FormatErrorMessage), 0, nullptr);
 			const std::string FormattedMessage(FormatErrorMessage, Size);
 			ErrorMessage += "\n\n" + FormattedMessage;
+			SB_LOG_ERROR("{}", FormattedMessage);
 		}
 		ErrorMessage += "\nError code: " + std::to_string(Code);
 		MessageBox(nullptr, ErrorMessage.c_str(), TEXT("Snowbite | Fatal Error"), MB_OK | MB_ICONERROR);
@@ -116,6 +120,7 @@ void FPlatform::CollectCrashInfo(const LPEXCEPTION_POINTERS ExceptionPointers,
 		                                   MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
 		                                   reinterpret_cast<LPSTR>(&ErrorMessage), 0, nullptr);
 		const std::string FormattedMessage(ErrorMessage, Size);
+		SB_LOG_ERROR("{}", FormattedMessage);
 		std::string Message = "Fatal error occurred! Creating Crash Dump...";
 		Message += "\n\n" + FormattedMessage;
 		Message += "\nError code: " + std::to_string(ExceptionPointers->ExceptionRecord->ExceptionCode);
@@ -169,16 +174,14 @@ void FPlatform::PrintHRESULT(const HRESULT Code, const std::source_location& Loc
 	const std::string FormattedMessage(FormatErrorMessage, Size);
 	std::string FileName = Location.file_name();
 	FileName = FileName.substr(FileName.find_last_of("\\") + 1);
-	std::cout << "[Error] Failed HRESULT in file " << FileName << " at line " << Location.line() <<
-		std::endl;
-	std::cout << "[Error] Message: " << FormattedMessage;
-	std::cout.flush();
+	SB_LOG_ERROR("Failed HRESULT in file {} at line {}", FileName.c_str(), Location.line());
+	SB_LOG_ERROR("Message: {}", FormattedMessage);
 }
 
 LONG FPlatform::SehExceptionHandler(EXCEPTION_POINTERS* ExceptionPointers)
 {
 	OutputDebugString(TEXT("Unhandled Exception! Creating Crash Dump..."));
-	std::cout << "Unhandled Exception! Creating Crash Dump..." << std::endl;
+	SB_LOG_ERROR("Unhandled Exception! Creating Crash Dump...");
 	CollectCrashInfo(ExceptionPointers, GetCurrentThreadId());
 	return EXCEPTION_CONTINUE_SEARCH;
 }
