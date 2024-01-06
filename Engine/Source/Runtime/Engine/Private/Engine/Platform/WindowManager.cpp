@@ -27,6 +27,7 @@ void FWindowManager::Register(const std::shared_ptr<FWindow>& Window)
 		return;
 	FMutexGuard Guard(Mutex);
 	Windows.push_back(Window);
+	SB_LOG_INFO("Registered window: {}", Window->GetDesc().Title);
 }
 
 void FWindowManager::Unregister(const std::shared_ptr<FWindow>& Window)
@@ -36,7 +37,10 @@ void FWindowManager::Unregister(const std::shared_ptr<FWindow>& Window)
 	FMutexGuard Guard(Mutex);
 	Windows.erase(std::ranges::find_if(Windows, [Window](const std::shared_ptr<FWindow>& RegisteredWindow)
 	{
-		return RegisteredWindow->GetNativeHandle() == Window->GetNativeHandle();
+		const bool bIsSameHandle = RegisteredWindow->GetNativeHandle() == Window->GetNativeHandle();
+		if (bIsSameHandle)
+			SB_LOG_INFO("Unregistered window: {}", RegisteredWindow->GetDesc().Title);
+		return bIsSameHandle;
 	}));
 }
 
@@ -47,7 +51,10 @@ void FWindowManager::Unregister(HWND WindowHandle)
 	FMutexGuard Guard(Mutex);
 	Windows.erase(std::ranges::find_if(Windows, [WindowHandle](const std::shared_ptr<FWindow>& RegisteredWindow)
 	{
-		return RegisteredWindow->GetNativeHandle() == WindowHandle;
+		const bool bIsSameHandle = RegisteredWindow->GetNativeHandle() == WindowHandle;
+		if (bIsSameHandle)
+			SB_LOG_INFO("Unregistered window: {}", RegisteredWindow->GetDesc().Title);
+		return bIsSameHandle;
 	}));
 }
 

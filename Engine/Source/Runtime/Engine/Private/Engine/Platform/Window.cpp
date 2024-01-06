@@ -20,6 +20,7 @@ FWindow::FWindow(const FWindowDesc& InDesc)
 		FPlatform::Fatal();
 	if (Desc.bShouldAutoShow)
 		Show();
+	SB_LOG_INFO("Created new window: {} ({}x{})", Desc.Title, Desc.Size.X, Desc.Size.Y);
 }
 
 FWindow::~FWindow()
