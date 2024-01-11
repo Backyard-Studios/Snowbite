@@ -48,6 +48,7 @@ HRESULT FGraphicsDevice::Initialize(const std::shared_ptr<FWindow>& InWindow, co
 	RTVHeapDesc.NumDescriptors = Desc.MaxRenderTargets;
 	RTVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	SB_CHECK(Device->CreateDescriptorHeap(&RTVHeapDesc, IID_PPV_ARGS(&RTVHeap)));
+	SB_LOG_INFO("Max Render Targets: {}", Desc.MaxRenderTargets);
 
 	FSwapChainDesc SwapChainDesc;
 	SwapChainDesc.Window = Window;
@@ -101,7 +102,7 @@ void FGraphicsDevice::Destroy()
 #ifdef SB_DEBUG
 	if (DebugController)
 	{
-		SB_LOG_INFO("Reporting live objects. Take a look at the debug output to see if there are any leaks.");
+		SB_LOG_WARN("Reporting live objects. Take a look at the debug output to see if there are any leaks.");
 		OutputDebugString(TEXT("Reporting live objects:\n"));
 		DebugController->ReportLiveObjects(DXGI_DEBUG_ALL,
 		                                   static_cast<DXGI_DEBUG_RLO_FLAGS>(DXGI_DEBUG_RLO_DETAIL |
