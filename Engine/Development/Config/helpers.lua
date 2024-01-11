@@ -35,7 +35,7 @@ function sb_project(name)
 				workspace_macro_prefix .. 'RELEASE=1',
 			}
 		filter { 'configurations:Distribution' }
-			optimize 'On'
+			optimize 'Full'
 			defines {
 				'NDEBUG=1',
 				workspace_macro_prefix .. 'DISTRIBUTION=1',
@@ -70,6 +70,10 @@ function sb_project(name)
         workspace_macro_prefix .. 'EXECUTABLE=1',
         workspace_macro_prefix .. 'EXECUTABLE_WINDOWED=1',
 			}
+    filter { "options:build-type=editor" }
+      defines {
+        workspace_macro_prefix .. '_EDITOR=1',
+      }
   sb_reset_filter()
 end
 

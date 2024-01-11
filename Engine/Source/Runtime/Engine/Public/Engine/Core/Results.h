@@ -1,3 +1,0 @@
-﻿#pragma once
-
-#define E_FATAL_FAIL MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, 0x0001)
