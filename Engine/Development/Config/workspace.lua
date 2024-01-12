@@ -18,4 +18,8 @@ workspace('Snowbite')
 		system 'Windows'
 		systemversion 'latest'
 
-  	filter { }
+  filter { }
+
+  defines {
+    'SB_BUILD_MONOLITHIC=1'
+  }

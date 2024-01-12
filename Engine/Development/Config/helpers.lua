@@ -42,7 +42,8 @@ function sb_project(name)
 			}
 		filter { 'system:windows' }
       defines {
-        workspace_macro_prefix .. 'OS_WINDOWS=1',
+        workspace_macro_prefix .. 'PLATFORM_WINDOWS=1',
+        workspace_macro_prefix .. 'PLATFORM_NAME=Windows',
         'WIN32_LEAN_AND_MEAN',
         'NOMINMAX',
       }
