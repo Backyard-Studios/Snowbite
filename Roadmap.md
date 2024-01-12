@@ -55,6 +55,7 @@ The user should be able to write scripts in [angelscript](https://www.angelcode.
 ### Asset System
 
 An asset system that can load assets from a package file and keep track of the memory usage of each asset. The user should be able to create custom asset types through the scripting system.
+The asset system also handles the import and serialization of assets. Custom importers and serializers can be created through the scripting system.
 
 ### Deferred Rendering
 
